@@ -10,20 +10,9 @@
 namespace flutter {
 
 Layer::Layer()
-    : paint_bounds_(SkRect::MakeEmpty()),
-      unique_id_(NextUniqueID()),
-      needs_system_composite_(false) {}
+    : paint_bounds_(SkRect::MakeEmpty()) {}
 
 Layer::~Layer() = default;
-
-uint64_t Layer::NextUniqueID() {
-  static std::atomic<uint64_t> nextID(1);
-  uint64_t id;
-  do {
-    id = nextID.fetch_add(1);
-  } while (id == 0);  // 0 is reserved for an invalid id.
-  return id;
-}
 
 void Layer::Preroll(PrerollContext* context, const SkMatrix& matrix) {}
 
@@ -54,10 +43,6 @@ Layer::AutoPrerollSaveLayerState::~AutoPrerollSaveLayerState() {
         (prev_surface_needs_readback_ || layer_itself_performs_readback_);
   }
 }
-
-#if defined(OS_FUCHSIA)
-void Layer::UpdateScene(SceneUpdateContext& context) {}
-#endif  // defined(OS_FUCHSIA)
 
 Layer::AutoSaveLayer::AutoSaveLayer(const PaintContext& paint_context,
                                     const SkRect& bounds,

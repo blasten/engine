@@ -65,24 +65,4 @@ void ContainerLayer::PaintChildren(PaintContext& context) const {
   }
 }
 
-#if defined(OS_FUCHSIA)
-
-void ContainerLayer::UpdateScene(SceneUpdateContext& context) {
-  UpdateSceneChildren(context);
-}
-
-void ContainerLayer::UpdateSceneChildren(SceneUpdateContext& context) {
-  FML_DCHECK(needs_system_composite());
-
-  // Paint all of the layers which need to be drawn into the container.
-  // These may be flattened down to a containing
-  for (auto& layer : layers_) {
-    if (layer->needs_system_composite()) {
-      layer->UpdateScene(context);
-    }
-  }
-}
-
-#endif  // defined(OS_FUCHSIA)
-
 }  // namespace flutter

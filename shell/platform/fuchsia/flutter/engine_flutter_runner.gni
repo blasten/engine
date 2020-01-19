@@ -46,12 +46,13 @@ template("flutter_runner") {
       "accessibility_bridge.h",
       "component.cc",
       "component.h",
-      "compositor_context.cc",
-      "compositor_context.h",
       "engine.cc",
       "engine.h",
       "fuchsia_intl.cc",
       "fuchsia_intl.h",
+      "fuchsia_surface.h",
+      "fuchsia_surface_vulkan.cc",
+      "fuchsia_surface_vulkan.h",
       "isolate_configurator.cc",
       "isolate_configurator.h",
       "logging.h",
@@ -60,21 +61,11 @@ template("flutter_runner") {
       "platform_view.h",
       "runner.cc",
       "runner.h",
-      "session_connection.cc",
-      "session_connection.h",
-      "surface.cc",
-      "surface.h",
       "unique_fdio_ns.h",
       "vsync_recorder.cc",
       "vsync_recorder.h",
       "vsync_waiter.cc",
       "vsync_waiter.h",
-      "vulkan_surface.cc",
-      "vulkan_surface.h",
-      "vulkan_surface_pool.cc",
-      "vulkan_surface_pool.h",
-      "vulkan_surface_producer.cc",
-      "vulkan_surface_producer.h",
     ]
 
     # The use of these dependencies is temporary and will be moved behind the
@@ -92,13 +83,11 @@ template("flutter_runner") {
       "$flutter_root/shell/common",
     ]
 
-    _fuchsia_platform = "$flutter_root/shell/platform/fuchsia"
-
     # TODO(kaushikiska) evaluate if all of these are needed.
     fuchsia_deps = [
-      "${_fuchsia_platform}/dart-pkg/fuchsia",
-      "${_fuchsia_platform}/dart-pkg/zircon",
-      "${_fuchsia_platform}/runtime/dart/utils",
+      "$flutter_root/shell/platform/fuchsia/dart-pkg/fuchsia",
+      "$flutter_root/shell/platform/fuchsia/dart-pkg/zircon",
+      "$flutter_root/shell/platform/fuchsia/runtime/dart/utils",
     ]
 
     deps = [

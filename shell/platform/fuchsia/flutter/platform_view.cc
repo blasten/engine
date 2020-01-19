@@ -4,63 +4,51 @@
 
 #define RAPIDJSON_HAS_STDSTRING 1
 
-#include "platform_view.h"
+#include "flutter/shell/platform/fuchsia/flutter/platform_view.h"
 
 #include <sstream>
 
 #include "flutter/fml/logging.h"
-#include "flutter/lib/ui/compositing/scene_host.h"
 #include "flutter/lib/ui/window/pointer_data.h"
-#include "flutter/lib/ui/window/window.h"
-#include "logging.h"
+#include "flutter/lib/ui/window/viewport_metrics.h"
+#include "flutter/shell/platform/fuchsia/flutter/fuchsia_surface_software.h"
+#include "flutter/shell/platform/fuchsia/flutter/fuchsia_surface_vulkan.h"
+#include "flutter/shell/platform/fuchsia/flutter/logging.h"
+#include "flutter/shell/platform/fuchsia/flutter/vsync_waiter.h"
+#include "flutter/shell/platform/fuchsia/runtime/dart/utils/inlines.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "runtime/dart/utils/inlines.h"
-#include "vsync_waiter.h"
 
 namespace flutter_runner {
-
 namespace {
 
-inline fuchsia::ui::gfx::vec3 Add(const fuchsia::ui::gfx::vec3& a,
-                                  const fuchsia::ui::gfx::vec3& b) {
-  return {.x = a.x + b.x, .y = a.y + b.y, .z = a.z + b.z};
+constexpr char kFlutterPlatformChannel[] = "flutter/platform";
+constexpr char kTextInputChannel[] = "flutter/textinput";
+constexpr char kKeyEventChannel[] = "flutter/keyevent";
+constexpr char kAccessibilityChannel[] = "flutter/accessibility";
+constexpr char kFlutterPlatformViewsChannel[] = "flutter/platform_views";
+
+std::unique_ptr<FuchsiaSurface> CreateFuchsiaSurface(std::string debug_label,
+                                                     fuchsia::ui::views::ViewToken view_token,
+                                                     fidl::InterfaceHandle<fuchsia::ui::scenic::Session> session,
+                                                     fit::closure on_session_error_callback,
+                                                     zx_handle_t vsync_event_handle,
+                                                     bool use_software_rendering) {
+  if (use_software_rendering) {
+    FML_DCHECK(false);
+    //return std::make_unique<FuchsiaSurfaceSoftware>(std::move(debug_label), std::move(view_token), std::move(session), std::move(on_session_error_callback), vsync_event_handle);
+  }
+
+  return std::make_unique<FuchsiaSurfaceVulkan>(std::move(debug_label), std::move(view_token), std::move(session), std::move(on_session_error_callback), vsync_event_handle);
 }
 
-inline fuchsia::ui::gfx::vec3 Subtract(const fuchsia::ui::gfx::vec3& a,
-                                       const fuchsia::ui::gfx::vec3& b) {
-  return {.x = a.x - b.x, .y = a.y - b.y, .z = a.z - b.z};
+fuchsia::ui::views::ViewRef CloneViewRef(const fuchsia::ui::views::ViewRef& view_ref) {
+  fuchsia::ui::views::ViewRef new_view_ref;
+  view_ref.Clone(&new_view_ref);
+
+  return new_view_ref;
 }
-
-inline fuchsia::ui::gfx::BoundingBox InsetBy(
-    const fuchsia::ui::gfx::BoundingBox& box,
-    const fuchsia::ui::gfx::vec3& inset_from_min,
-    const fuchsia::ui::gfx::vec3& inset_from_max) {
-  return {.min = Add(box.min, inset_from_min),
-          .max = Subtract(box.max, inset_from_max)};
-}
-
-inline fuchsia::ui::gfx::BoundingBox ViewPropertiesLayoutBox(
-    const fuchsia::ui::gfx::ViewProperties& view_properties) {
-  return InsetBy(view_properties.bounding_box, view_properties.inset_from_min,
-                 view_properties.inset_from_max);
-}
-
-inline fuchsia::ui::gfx::vec3 Max(const fuchsia::ui::gfx::vec3& v,
-                                  float min_val) {
-  return {.x = std::max(v.x, min_val),
-          .y = std::max(v.y, min_val),
-          .z = std::max(v.z, min_val)};
-}
-
-}  // end namespace
-
-static constexpr char kFlutterPlatformChannel[] = "flutter/platform";
-static constexpr char kTextInputChannel[] = "flutter/textinput";
-static constexpr char kKeyEventChannel[] = "flutter/keyevent";
-static constexpr char kAccessibilityChannel[] = "flutter/accessibility";
-static constexpr char kFlutterPlatformViewsChannel[] = "flutter/platform_views";
 
 // FL(77): Terminate engine if Fuchsia system FIDL connections have error.
 template <class T>
@@ -77,42 +65,39 @@ void SetInterfaceErrorHandler(fidl::Binding<T>& binding, std::string name) {
   });
 }
 
+}  // end namespace
+
 PlatformView::PlatformView(
     flutter::PlatformView::Delegate& delegate,
-    std::string debug_label,
-    fuchsia::ui::views::ViewRef view_ref,
     flutter::TaskRunners task_runners,
+    std::string debug_label,
     std::shared_ptr<sys::ServiceDirectory> runner_services,
     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-        parent_environment_service_provider_handle,
+        parent_environment_service_provider,
+    fuchsia::ui::views::ViewToken view_token,
+    fidl::InterfaceHandle<fuchsia::ui::scenic::Session>
+        session,
     fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>
         session_listener_request,
-    fit::closure session_listener_error_callback,
-    OnMetricsUpdate session_metrics_did_change_callback,
-    OnSizeChangeHint session_size_change_hint_callback,
-    OnEnableWireframe wireframe_enabled_callback,
-    zx_handle_t vsync_event_handle)
+    fit::closure on_session_error_callback,
+    fit::closure on_session_listener_error_callback,
+    zx_handle_t vsync_event_handle,
+    bool use_software_rendering)
     : flutter::PlatformView(delegate, std::move(task_runners)),
       debug_label_(std::move(debug_label)),
-      view_ref_(std::move(view_ref)),
+      surface_(CreateFuchsiaSurface(debug_label_, std::move(view_token), std::move(session), std::move(on_session_error_callback), vsync_event_handle, use_software_rendering)),
+      accessibility_bridge_(std::make_unique<AccessibilityBridge>(*this, runner_services, CloneViewRef(surface_->view_ref())),
+      parent_environment_service_provider_(parent_environment_service_provider_handle.Bind()),
       session_listener_binding_(this, std::move(session_listener_request)),
       session_listener_error_callback_(
           std::move(session_listener_error_callback)),
-      metrics_changed_callback_(std::move(session_metrics_did_change_callback)),
-      size_change_hint_callback_(std::move(session_size_change_hint_callback)),
-      wireframe_enabled_callback_(std::move(wireframe_enabled_callback)),
-      ime_client_(this),
-      surface_(std::make_unique<Surface>(debug_label_)),
-      vsync_event_handle_(vsync_event_handle) {
+      ime_client_(this) {
   // Register all error handlers.
   SetInterfaceErrorHandler(session_listener_binding_, "SessionListener");
   SetInterfaceErrorHandler(ime_, "Input Method Editor");
   SetInterfaceErrorHandler(text_sync_service_, "Text Sync Service");
   SetInterfaceErrorHandler(parent_environment_service_provider_,
                            "Parent Environment Service Provider");
-  // Access the IME service.
-  parent_environment_service_provider_ =
-      parent_environment_service_provider_handle.Bind();
 
   parent_environment_service_provider_.get()->ConnectToService(
       fuchsia::ui::input::ImeService::Name_,
@@ -120,11 +105,6 @@ PlatformView::PlatformView(
 
   // Finally! Register the native platform message handlers.
   RegisterPlatformMessageHandlers();
-
-  fuchsia::ui::views::ViewRef accessibility_view_ref;
-  view_ref_.Clone(&accessibility_view_ref);
-  accessibility_bridge_ = std::make_unique<AccessibilityBridge>(
-      *this, runner_services, std::move(accessibility_view_ref));
 }
 
 PlatformView::~PlatformView() = default;
@@ -164,13 +144,6 @@ void PlatformView::OnPropertiesChanged(
 
   FlushViewportMetrics();
 }
-
-// TODO(SCN-975): Re-enable.
-// void PlatformView::ConnectSemanticsProvider(
-//     fuchsia::ui::viewsv1token::ViewToken token) {
-//   semantics_bridge_.SetupEnvironment(
-//       token.value, parent_environment_service_provider_.get());
-// }
 
 void PlatformView::UpdateViewportMetrics(
     const fuchsia::ui::gfx::Metrics& metrics) {
@@ -561,15 +534,12 @@ void PlatformView::DeactivateIme() {
 // |flutter::PlatformView|
 std::unique_ptr<flutter::VsyncWaiter> PlatformView::CreateVSyncWaiter() {
   return std::make_unique<flutter_runner::VsyncWaiter>(
-      debug_label_, vsync_event_handle_, task_runners_);
+      debug_label_, task_runners_, surface_->vsync_event_handle());
 }
 
 // |flutter::PlatformView|
 std::unique_ptr<flutter::Surface> PlatformView::CreateRenderingSurface() {
-  // This platform does not repeatly lose and gain a surface connection. So the
-  // surface is setup once during platform view setup and returned to the
-  // shell on the initial (and only) |NotifyCreated| call.
-  return std::move(surface_);
+  return surface_->CreateGPUSurface();
 }
 
 // |flutter::PlatformView|

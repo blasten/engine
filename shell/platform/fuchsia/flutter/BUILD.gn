@@ -15,7 +15,7 @@ import("$flutter_root/vulkan/config.gni")
 import("engine_flutter_runner.gni")
 
 shell_gpu_configuration("fuchsia_gpu_configuration") {
-  enable_software = false
+  enable_software = true
   enable_gl = false
   enable_vulkan = true
   enable_metal = false
@@ -309,8 +309,6 @@ executable("flutter_runner_unittests") {
     "runner.cc",
     "runner.h",
     "runner_unittest.cc",
-    "surface.cc",
-    "surface.h",
     "vsync_recorder.cc",
     "vsync_recorder.h",
     "vsync_waiter.cc",

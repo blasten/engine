@@ -55,7 +55,6 @@ Engine::Engine(Delegate& delegate,
                flutter::Settings settings,
                fml::RefPtr<const flutter::DartSnapshot> isolate_snapshot,
                fuchsia::ui::views::ViewToken view_token,
-               scenic::ViewRefPair view_ref_pair,
                UniqueFDIONS fdio_ns,
                fidl::InterfaceRequest<fuchsia::io::Directory> directory_request)
     : delegate_(delegate),
@@ -87,66 +86,6 @@ Engine::Engine(Delegate& delegate,
   environment->GetServices(parent_environment_service_provider.NewRequest());
   environment.Unbind();
 
-  // We need to manually schedule a frame when the session metrics change.
-  OnMetricsUpdate on_session_metrics_change_callback = std::bind(
-      &Engine::OnSessionMetricsDidChange, this, std::placeholders::_1);
-
-  OnSizeChangeHint on_session_size_change_hint_callback =
-      std::bind(&Engine::OnSessionSizeChangeHint, this, std::placeholders::_1,
-                std::placeholders::_2);
-
-  OnEnableWireframe on_enable_wireframe_callback = std::bind(
-      &Engine::OnDebugWireframeSettingsChanged, this, std::placeholders::_1);
-
-  // SessionListener has a OnScenicError method; invoke this callback on the
-  // platform thread when that happens. The Session itself should also be
-  // disconnected when this happens, and it will also attempt to terminate.
-  fit::closure on_session_listener_error_callback =
-      [dispatcher = async_get_default_dispatcher(),
-       weak = weak_factory_.GetWeakPtr()]() {
-        async::PostTask(dispatcher, [weak]() {
-          if (weak) {
-            weak->Terminate();
-          }
-        });
-      };
-
-  fuchsia::ui::views::ViewRef view_ref;
-  view_ref_pair.view_ref.Clone(&view_ref);
-
-  // Setup the callback that will instantiate the platform view.
-  flutter::Shell::CreateCallback<flutter::PlatformView>
-      on_create_platform_view = fml::MakeCopyable(
-          [debug_label = thread_label_, view_ref = std::move(view_ref),
-           runner_services,
-           parent_environment_service_provider =
-               std::move(parent_environment_service_provider),
-           session_listener_request = std::move(session_listener_request),
-           on_session_listener_error_callback =
-               std::move(on_session_listener_error_callback),
-           on_session_metrics_change_callback =
-               std::move(on_session_metrics_change_callback),
-           on_session_size_change_hint_callback =
-               std::move(on_session_size_change_hint_callback),
-           on_enable_wireframe_callback =
-               std::move(on_enable_wireframe_callback),
-           vsync_handle = vsync_event_.get()](flutter::Shell& shell) mutable {
-            return std::make_unique<flutter_runner::PlatformView>(
-                shell,                   // delegate
-                debug_label,             // debug label
-                std::move(view_ref),     // view ref
-                shell.GetTaskRunners(),  // task runners
-                std::move(runner_services),
-                std::move(parent_environment_service_provider),  // services
-                std::move(session_listener_request),  // session listener
-                std::move(on_session_listener_error_callback),
-                std::move(on_session_metrics_change_callback),
-                std::move(on_session_size_change_hint_callback),
-                std::move(on_enable_wireframe_callback),
-                vsync_handle  // vsync handle
-            );
-          });
-
   // Session can be terminated on the GPU thread, but we must terminate
   // ourselves on the platform thread.
   //
@@ -163,6 +102,48 @@ Engine::Engine(Delegate& delegate,
         });
       };
 
+  // SessionListener has a OnScenicError method; invoke this callback on the
+  // platform thread when that happens. The Session itself should also be
+  // disconnected when this happens, and it will also attempt to terminate.
+  fit::closure on_session_listener_error_callback =
+      [dispatcher = async_get_default_dispatcher(),
+       weak = weak_factory_.GetWeakPtr()]() {
+        async::PostTask(dispatcher, [weak]() {
+          if (weak) {
+            weak->Terminate();
+          }
+        });
+      };
+
+  // Setup the callback that will instantiate the platform view.
+  flutter::Shell::CreateCallback<flutter::PlatformView>
+      on_create_platform_view = fml::MakeCopyable(
+          [debug_label = thread_label_,
+           runner_services,
+           parent_environment_service_provider =
+               std::move(parent_environment_service_provider),
+           view_token = std::move(view_token),
+           session = std::move(session),
+           session_listener_request = std::move(session_listener_request),
+           on_session_error_callback = std::move(on_session_error_callback),
+           on_session_listener_error_callback =
+               std::move(on_session_listener_error_callback),
+           vsync_handle = vsync_event_.get()](flutter::Shell& shell) mutable {
+            return std::make_unique<flutter_runner::PlatformView>(
+                shell,                   // delegate
+                shell.GetTaskRunners(),  // task runners
+                debug_label,             // debug label
+                std::move(runner_services),
+                std::move(parent_environment_service_provider),
+                std::move(view_token),
+                std::move(session),
+                std::move(session_listener_request),
+                std::move(on_session_error_callback),
+                std::move(on_session_listener_error_callback),
+                vsync_handle
+            );
+          });
+
   // Get the task runners from the managed threads. The current thread will be
   // used as the "platform" thread.
   fml::MessageLoop::EnsureInitializedForCurrentThread();
@@ -177,32 +158,10 @@ Engine::Engine(Delegate& delegate,
 
   // Setup the callback that will instantiate the rasterizer.
   flutter::Shell::CreateCallback<flutter::Rasterizer> on_create_rasterizer =
-      fml::MakeCopyable([thread_label = thread_label_,              //
-                         view_token = std::move(view_token),        //
-                         view_ref_pair = std::move(view_ref_pair),  //
-                         session = std::move(session),              //
-                         on_session_error_callback,                 //
-                         vsync_event = vsync_event_.get()           //
-  ](flutter::Shell& shell) mutable {
-        std::unique_ptr<flutter_runner::CompositorContext> compositor_context;
-        {
-          TRACE_DURATION("flutter", "CreateCompositorContext");
-          compositor_context =
-              std::make_unique<flutter_runner::CompositorContext>(
-                  thread_label,           // debug label
-                  std::move(view_token),  // scenic view we attach our tree to
-                  std::move(view_ref_pair),  // scenic view ref/view ref control
-                  std::move(session),        // scenic session
-                  on_session_error_callback,  // session did encounter error
-                  vsync_event                 // vsync event handle
-              );
-        }
-
-        return std::make_unique<flutter::Rasterizer>(
-            shell.GetTaskRunners(),        // task runners
-            std::move(compositor_context)  // compositor context
-        );
-      });
+      [thread_label = thread_label_, vsync_event = vsync_event_.get()](flutter::Shell& shell) {
+        return std::make_unique<flutter::Rasterizer>(shell,
+                                                     shell.GetTaskRunners());
+      };
 
   UpdateNativeThreadLabelNames(thread_label_, task_runners);
 
@@ -262,8 +221,8 @@ Engine::Engine(Delegate& delegate,
     );
   }
 
-  //  This platform does not get a separate surface platform view creation
-  //  notification. Fire one eagerly.
+  // This platform does not get a separate surface platform view creation
+  // notification. Fire one eagerly.
   shell_->GetPlatformView()->NotifyCreated();
 
   // Connect to the intl property provider.  If the connection fails, the
@@ -454,60 +413,6 @@ void Engine::Terminate() {
   delegate_.OnEngineTerminate(this);
   // Warning. Do not do anything after this point as the delegate may have
   // collected this object.
-}
-
-void Engine::OnSessionMetricsDidChange(
-    const fuchsia::ui::gfx::Metrics& metrics) {
-  if (!shell_) {
-    return;
-  }
-
-  shell_->GetTaskRunners().GetGPUTaskRunner()->PostTask(
-      [rasterizer = shell_->GetRasterizer(), metrics]() {
-        if (rasterizer) {
-          auto compositor_context =
-              reinterpret_cast<flutter_runner::CompositorContext*>(
-                  rasterizer->compositor_context());
-
-          compositor_context->OnSessionMetricsDidChange(metrics);
-        }
-      });
-}
-
-void Engine::OnDebugWireframeSettingsChanged(bool enabled) {
-  if (!shell_) {
-    return;
-  }
-
-  shell_->GetTaskRunners().GetGPUTaskRunner()->PostTask(
-      [rasterizer = shell_->GetRasterizer(), enabled]() {
-        if (rasterizer) {
-          auto compositor_context =
-              reinterpret_cast<flutter_runner::CompositorContext*>(
-                  rasterizer->compositor_context());
-
-          compositor_context->OnWireframeEnabled(enabled);
-        }
-      });
-}
-
-void Engine::OnSessionSizeChangeHint(float width_change_factor,
-                                     float height_change_factor) {
-  if (!shell_) {
-    return;
-  }
-
-  shell_->GetTaskRunners().GetGPUTaskRunner()->PostTask(
-      [rasterizer = shell_->GetRasterizer(), width_change_factor,
-       height_change_factor]() {
-        if (rasterizer) {
-          auto compositor_context = reinterpret_cast<CompositorContext*>(
-              rasterizer->compositor_context());
-
-          compositor_context->OnSessionSizeChangeHint(width_change_factor,
-                                                      height_change_factor);
-        }
-      });
 }
 
 #if !defined(DART_PRODUCT)
