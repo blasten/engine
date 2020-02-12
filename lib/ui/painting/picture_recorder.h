@@ -6,6 +6,7 @@
 #define FLUTTER_LIB_UI_PAINTING_PICTURE_RECORDER_H_
 
 #include "flutter/lib/ui/dart_wrapper.h"
+#include "flutter/lib/ui/painting/patched_r_tree.h"
 #include "third_party/skia/include/core/SkPictureRecorder.h"
 
 namespace tonic {
@@ -36,7 +37,7 @@ class PictureRecorder : public RefCountedDartWrappable<PictureRecorder> {
  private:
   PictureRecorder();
 
-  SkRTreeFactory rtree_factory_;
+  PatchedRTreeFactory rtree_factory_;
   SkPictureRecorder picture_recorder_;
   fml::RefPtr<Canvas> canvas_;
 };

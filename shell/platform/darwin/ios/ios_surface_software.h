@@ -62,7 +62,7 @@ class IOSSurfaceSoftware final : public IOSSurface,
   std::vector<SkCanvas*> GetCurrentCanvases() override;
 
   // |ExternalViewEmbedder|
-  SkCanvas* CompositeEmbeddedView(int view_id) override;
+  void CompositeEmbeddedView(int view_id) override;
 
   // |ExternalViewEmbedder|
   bool SubmitFrame(GrContext* context) override;

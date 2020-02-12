@@ -134,10 +134,10 @@ std::vector<SkCanvas*> IOSSurfaceGL::GetCurrentCanvases() {
 }
 
 // |ExternalViewEmbedder|
-SkCanvas* IOSSurfaceGL::CompositeEmbeddedView(int view_id) {
+void IOSSurfaceGL::CompositeEmbeddedView(int view_id) {
   FlutterPlatformViewsController* platform_views_controller = GetPlatformViewsController();
   FML_CHECK(platform_views_controller != nullptr);
-  return platform_views_controller->CompositeEmbeddedView(view_id);
+  platform_views_controller->CompositeEmbeddedView(view_id);
 }
 
 // |ExternalViewEmbedder|

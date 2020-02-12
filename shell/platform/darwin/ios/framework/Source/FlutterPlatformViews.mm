@@ -14,6 +14,7 @@
 
 #include "FlutterPlatformViews_Internal.h"
 #include "flutter/fml/platform/darwin/scoped_nsobject.h"
+#include "flutter/lib/ui/painting/patched_r_tree.h"
 #include "flutter/shell/platform/darwin/common/framework/Headers/FlutterChannels.h"
 
 namespace flutter {
@@ -196,7 +197,10 @@ void FlutterPlatformViewsController::PrerollCompositeEmbeddedView(
     int view_id,
     std::unique_ptr<EmbeddedViewParams> params) {
   picture_recorders_[view_id] = std::make_unique<SkPictureRecorder>();
-  picture_recorders_[view_id]->beginRecording(SkRect::Make(frame_size_));
+
+  auto rtree_factory = PatchedRTreeFactory();
+
+  picture_recorders_[view_id]->beginRecording(SkRect::Make(frame_size_), &rtree_factory);
   picture_recorders_[view_id]->getRecordingCanvas()->clear(SK_ColorTRANSPARENT);
   composition_order_.push_back(view_id);
 
@@ -338,17 +342,17 @@ void FlutterPlatformViewsController::CompositeWithParams(int view_id,
   ApplyMutators(params.mutatorsStack, touchInterceptor);
 }
 
-SkCanvas* FlutterPlatformViewsController::CompositeEmbeddedView(int view_id) {
+void FlutterPlatformViewsController::CompositeEmbeddedView(int view_id) {
   // TODO(amirh): assert that this is running on the platform thread once we support the iOS
   // embedded views thread configuration.
 
   // Do nothing if the view doesn't need to be composited.
   if (views_to_recomposite_.count(view_id) == 0) {
-    return picture_recorders_[view_id]->getRecordingCanvas();
+    return;
   }
   CompositeWithParams(view_id, current_composition_params_[view_id]);
   views_to_recomposite_.erase(view_id);
-  return picture_recorders_[view_id]->getRecordingCanvas();
+  // return picture_recorders_[view_id]->getRecordingCanvas();
 }
 
 void FlutterPlatformViewsController::Reset() {
@@ -371,14 +375,15 @@ bool FlutterPlatformViewsController::SubmitFrame(GrContext* gr_context,
   DisposeViews();
 
   bool did_submit = true;
+  FML_DLOG(ERROR) << "composition_order_ SIZE: " << composition_order_.size();
   for (int64_t view_id : composition_order_) {
     EnsureOverlayInitialized(view_id, gl_context, gr_context);
     auto frame = overlays_[view_id]->surface->AcquireFrame(frame_size_);
     // If frame is null, AcquireFrame already printed out an error message.
     if (frame) {
-      SkCanvas* canvas = frame->SkiaCanvas();
-      canvas->drawPicture(picture_recorders_[view_id]->finishRecordingAsPicture());
-      canvas->flush();
+      // SkCanvas* canvas = frame->SkiaCanvas();
+      // canvas->drawPicture(picture_recorders_[view_id]->finishRecordingAsPicture());
+      // canvas->flush();
       did_submit &= frame->Submit();
     }
   }

@@ -38,7 +38,7 @@ void PlatformViewLayer::Paint(PaintContext& context) const {
                       "does not support embedding";
     return;
   }
-  SkCanvas* canvas = context.view_embedder->CompositeEmbeddedView(view_id_);
-  context.leaf_nodes_canvas = canvas;
+  context.view_embedder->CompositeEmbeddedView(view_id_);
+  // context.leaf_nodes_canvas = canvas;
 }
 }  // namespace flutter

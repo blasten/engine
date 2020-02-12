@@ -106,10 +106,10 @@ class FlutterPlatformViewsController {
 
   std::vector<SkCanvas*> GetCurrentCanvases();
 
-  SkCanvas* CompositeEmbeddedView(int view_id);
+  void CompositeEmbeddedView(int view_id);
 
   // Discards all platform views instances and auxiliary resources.
-  void Reset();
+  // void Reset();
 
   bool SubmitFrame(GrContext* gr_context, std::shared_ptr<IOSGLContext> gl_context);
 

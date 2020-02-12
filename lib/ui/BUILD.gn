@@ -50,6 +50,8 @@ source_set("ui") {
     "painting/multi_frame_codec.h",
     "painting/paint.cc",
     "painting/paint.h",
+    "painting/patched_r_tree.cc",
+    "painting/patched_r_tree.h",
     "painting/path.cc",
     "painting/path.h",
     "painting/path_measure.cc",
