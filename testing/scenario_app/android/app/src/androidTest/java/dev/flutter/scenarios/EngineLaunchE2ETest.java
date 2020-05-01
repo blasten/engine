@@ -4,19 +4,7 @@
 
 package dev.flutter.scenarios;
 
-import static org.junit.Assert.fail;
-
-import android.content.Context;
-import androidx.test.InstrumentationRegistry;
-import androidx.test.internal.runner.junit4.statement.UiThreadStatement;
 import androidx.test.runner.AndroidJUnit4;
-import io.flutter.embedding.engine.FlutterEngine;
-import io.flutter.embedding.engine.dart.DartExecutor;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 

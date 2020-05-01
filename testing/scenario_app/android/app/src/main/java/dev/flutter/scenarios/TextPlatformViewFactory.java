@@ -36,6 +36,7 @@ public final class TextPlatformViewFactory extends PlatformViewFactory {
   @SuppressWarnings("unchecked")
   @Override
   public PlatformView create(Context context, int id, Object args) {
+    // createdCallback.();
     String params = (String) args;
     return new TextPlatformView(context, id, params);
   }
