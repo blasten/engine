@@ -25,7 +25,7 @@ static fml::RefPtr<AndroidContextGL> CreateResourceLoadingContext() {
   return context;
 }
 
-AndroidSurfaceGL::AndroidSurfaceGL() {
+AndroidSurfaceGL::AndroidSurfaceGL(fml::jni::JavaObjectWeakGlobalRef java_object) {
   // Acquire the offscreen context.
   offscreen_context_ = CreateResourceLoadingContext();
 
@@ -33,7 +33,7 @@ AndroidSurfaceGL::AndroidSurfaceGL() {
     offscreen_context_ = nullptr;
   }
 
-  external_view_embedder_ = std::make_unique<AndroidExternalViewEmbedder>();
+  external_view_embedder_ = std::make_unique<AndroidExternalViewEmbedder>(java_object);
 }
 
 AndroidSurfaceGL::~AndroidSurfaceGL() = default;

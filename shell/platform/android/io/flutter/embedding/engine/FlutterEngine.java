@@ -101,6 +101,11 @@ public class FlutterEngine {
 
           platformViewsController.onPreEngineRestart();
         }
+
+        @Override
+        public void onPositionPlatformView(int viewId, float x, float y, float width, float height) {
+          platformViewsController.onPositionPlatformView(viewId, x, y, width, height);
+        }
       };
 
   /**
@@ -438,5 +443,7 @@ public class FlutterEngine {
   public interface EngineLifecycleListener {
     /** Lifecycle callback invoked before a hot restart of the Flutter engine. */
     void onPreEngineRestart();
+
+    void onPositionPlatformView(int viewId, float x, float y, float width, float height);
   }
 }

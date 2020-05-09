@@ -20,7 +20,7 @@ namespace flutter {
 class AndroidSurfaceGL final : public GPUSurfaceGLDelegate,
                                public AndroidSurface {
  public:
-  AndroidSurfaceGL();
+  AndroidSurfaceGL(fml::jni::JavaObjectWeakGlobalRef java_object);
 
   ~AndroidSurfaceGL() override;
 

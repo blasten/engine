@@ -12,9 +12,9 @@
 
 namespace flutter {
 
-AndroidSurfaceVulkan::AndroidSurfaceVulkan()
+AndroidSurfaceVulkan::AndroidSurfaceVulkan(fml::jni::JavaObjectWeakGlobalRef java_object)
     : proc_table_(fml::MakeRefCounted<vulkan::VulkanProcTable>()) {
-  external_view_embedder_ = std::make_unique<AndroidExternalViewEmbedder>();
+  external_view_embedder_ = std::make_unique<AndroidExternalViewEmbedder>(java_object);
 }
 
 AndroidSurfaceVulkan::~AndroidSurfaceVulkan() = default;

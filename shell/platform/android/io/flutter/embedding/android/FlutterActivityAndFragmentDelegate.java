@@ -252,25 +252,28 @@ import java.util.Arrays;
     Log.v(TAG, "Creating FlutterView.");
     ensureAlive();
 
-    if (host.getRenderMode() == RenderMode.surface) {
-      FlutterSurfaceView flutterSurfaceView =
-          new FlutterSurfaceView(
-              host.getActivity(), host.getTransparencyMode() == TransparencyMode.transparent);
+    // if (host.getRenderMode() == RenderMode.surface) {
+    //   FlutterSurfaceView flutterSurfaceView =
+    //       new FlutterSurfaceView(
+    //           host.getActivity(), host.getTransparencyMode() == TransparencyMode.transparent);
 
-      // Allow our host to customize FlutterSurfaceView, if desired.
-      host.onFlutterSurfaceViewCreated(flutterSurfaceView);
+    //   // Allow our host to customize FlutterSurfaceView, if desired.
+    //   host.onFlutterSurfaceViewCreated(flutterSurfaceView);
 
-      // Create the FlutterView that owns the FlutterSurfaceView.
-      flutterView = new FlutterView(host.getActivity(), flutterSurfaceView);
-    } else {
-      FlutterTextureView flutterTextureView = new FlutterTextureView(host.getActivity());
+    //   // Create the FlutterView that owns the FlutterSurfaceView.
+    //   flutterView = new FlutterView(host.getActivity(), flutterSurfaceView);
 
-      // Allow our host to customize FlutterSurfaceView, if desired.
-      host.onFlutterTextureViewCreated(flutterTextureView);
+    FlutterNativeView flutterNativeView = new FlutterNativeView(host.getActivity());
+    flutterView = new FlutterView(host.getActivity(), flutterNativeView);
+    // } else {
+    //   FlutterTextureView flutterTextureView = new FlutterTextureView(host.getActivity());
 
-      // Create the FlutterView that owns the FlutterTextureView.
-      flutterView = new FlutterView(host.getActivity(), flutterTextureView);
-    }
+    //   // Allow our host to customize FlutterSurfaceView, if desired.
+    //   host.onFlutterTextureViewCreated(flutterTextureView);
+
+    //   // Create the FlutterView that owns the FlutterTextureView.
+    //   flutterView = new FlutterView(host.getActivity(), flutterTextureView);
+    // }
 
     // Add listener to be notified when Flutter renders its first frame.
     flutterView.addOnFirstFrameRenderedListener(flutterUiDisplayListener);

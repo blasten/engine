@@ -19,7 +19,7 @@ namespace flutter {
 
 class AndroidSurface {
  public:
-  static std::unique_ptr<AndroidSurface> Create(bool use_software_rendering);
+  static std::unique_ptr<AndroidSurface> Create(bool use_software_rendering, fml::jni::JavaObjectWeakGlobalRef java_object);
 
   virtual ~AndroidSurface();
 

@@ -19,7 +19,7 @@ namespace flutter {
 class AndroidSurfaceVulkan : public AndroidSurface,
                              public GPUSurfaceVulkanDelegate {
  public:
-  AndroidSurfaceVulkan();
+  AndroidSurfaceVulkan(fml::jni::JavaObjectWeakGlobalRef java_object);
 
   ~AndroidSurfaceVulkan() override;
 

@@ -77,9 +77,7 @@ public class FlutterView extends FrameLayout {
   private static final String TAG = "FlutterView";
 
   // Internal view hierarchy references.
-  @Nullable private FlutterSurfaceView flutterSurfaceView;
-  @Nullable private FlutterTextureView flutterTextureView;
-  @Nullable private RenderSurface renderSurface;
+  @Nullable private View flutterView;
   private final Set<FlutterUiDisplayListener> flutterUiDisplayListeners = new HashSet<>();
   private boolean isFlutterUiDisplayed;
 
@@ -160,11 +158,11 @@ public class FlutterView extends FrameLayout {
     super(context, null);
 
     if (renderMode == RenderMode.surface) {
-      flutterSurfaceView = new FlutterSurfaceView(context);
-      renderSurface = flutterSurfaceView;
+      flutterView = new FlutterSurfaceView(context);
+    } else if (renderMode == RenderMode.view) {
+      flutterView = new FlutterNativeView(context);
     } else {
-      flutterTextureView = new FlutterTextureView(context);
-      renderSurface = flutterTextureView;
+      flutterView = new FlutterTextureView(context);
     }
 
     init();
@@ -215,6 +213,13 @@ public class FlutterView extends FrameLayout {
   }
 
   /**
+   * NativeView
+   */
+  public FlutterView(@NonNull Context context, @NonNull FlutterNativeView flutterNativeView) {
+    this(context, null, flutterNativeView);
+  }
+
+  /**
    * Constructs a {@code FlutterView} in an XML-inflation-compliant manner.
    *
    * <p>{@code FlutterView} requires an {@code Activity} instead of a generic {@code Context} to be
@@ -238,12 +243,12 @@ public class FlutterView extends FrameLayout {
     super(context, null);
 
     if (renderMode == RenderMode.surface) {
-      flutterSurfaceView =
+      flutterView =
           new FlutterSurfaceView(context, transparencyMode == TransparencyMode.transparent);
-      renderSurface = flutterSurfaceView;
+    } if (renderMode == RenderMode.view) {
+      flutterView = new FlutterNativeView(context);
     } else {
-      flutterTextureView = new FlutterTextureView(context);
-      renderSurface = flutterTextureView;
+      flutterView = new FlutterTextureView(context);
     }
 
     init();
@@ -255,8 +260,7 @@ public class FlutterView extends FrameLayout {
       @NonNull FlutterSurfaceView flutterSurfaceView) {
     super(context, attrs);
 
-    this.flutterSurfaceView = flutterSurfaceView;
-    this.renderSurface = flutterSurfaceView;
+    this.flutterView = flutterSurfaceView;
 
     init();
   }
@@ -267,8 +271,19 @@ public class FlutterView extends FrameLayout {
       @NonNull FlutterTextureView flutterTextureView) {
     super(context, attrs);
 
-    this.flutterTextureView = flutterTextureView;
-    this.renderSurface = flutterTextureView;
+    this.flutterView = flutterTextureView;
+
+    init();
+  }
+
+
+  private FlutterView(
+      @NonNull Context context,
+      @Nullable AttributeSet attrs,
+      @NonNull FlutterNativeView flutterNativeView) {
+    super(context, attrs);
+
+    this.flutterView = flutterNativeView;
 
     init();
   }
@@ -276,13 +291,10 @@ public class FlutterView extends FrameLayout {
   private void init() {
     Log.v(TAG, "Initializing FlutterView");
 
-    if (flutterSurfaceView != null) {
-      Log.v(TAG, "Internally using a FlutterSurfaceView.");
-      addView(flutterSurfaceView);
-    } else {
-      Log.v(TAG, "Internally using a FlutterTextureView.");
-      addView(flutterTextureView);
-    }
+    LayoutParams params = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+    flutterView.setLayoutParams(params);
+    addView(flutterView);
+
 
     // FlutterView needs to be focusable so that the InputMethodManager can interact with it.
     setFocusable(true);
@@ -704,7 +716,7 @@ public class FlutterView extends FrameLayout {
     // Instruct our FlutterRenderer that we are now its designated RenderSurface.
     FlutterRenderer flutterRenderer = this.flutterEngine.getRenderer();
     isFlutterUiDisplayed = flutterRenderer.isDisplayingFlutterUi();
-    renderSurface.attachToRenderer(flutterRenderer);
+    ((RenderSurface) flutterView).attachToRenderer(flutterRenderer);
     flutterRenderer.addIsDisplayingFlutterUiListener(flutterUiDisplayListener);
 
     // Initialize various components that know how to process Android View I/O
@@ -802,7 +814,7 @@ public class FlutterView extends FrameLayout {
     flutterRenderer.removeIsDisplayingFlutterUiListener(flutterUiDisplayListener);
     flutterRenderer.stopRenderingToSurface();
     flutterRenderer.setSemanticsEnabled(false);
-    renderSurface.detachFromRenderer();
+    ((RenderSurface) flutterView).detachFromRenderer();
     flutterEngine = null;
   }
 
@@ -810,7 +822,7 @@ public class FlutterView extends FrameLayout {
   @VisibleForTesting
   public boolean isAttachedToFlutterEngine() {
     return flutterEngine != null
-        && flutterEngine.getRenderer() == renderSurface.getAttachedRenderer();
+        && flutterEngine.getRenderer() == ((RenderSurface)flutterView).getAttachedRenderer();
   }
 
   /**
@@ -955,7 +967,9 @@ public class FlutterView extends FrameLayout {
      * android.graphics.SurfaceTexture} are required, developers should strongly prefer the {@link
      * RenderMode#surface} render mode.
      */
-    texture
+    texture,
+
+    view
   }
 
   /**

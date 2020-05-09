@@ -118,6 +118,12 @@ void FlutterViewOnPreEngineRestart(JNIEnv* env, jobject obj) {
   FML_CHECK(CheckException(env));
 }
 
+static jmethodID g_on_position_platform_view_method = nullptr;
+void FlutterViewOnPositionPlatformView(JNIEnv* env, jobject obj, jint view_id, jfloat x, jfloat y, jfloat width, jfloat height) {
+  env->CallVoidMethod(obj, g_on_position_platform_view_method, view_id, x, y, width, height);
+  FML_CHECK(CheckException(env));
+}
+
 static jmethodID g_attach_to_gl_context_method = nullptr;
 void SurfaceTextureAttachToGLContext(JNIEnv* env, jobject obj, jint textureId) {
   env->CallVoidMethod(obj, g_attach_to_gl_context_method, textureId);
@@ -716,6 +722,14 @@ bool RegisterApi(JNIEnv* env) {
 
   if (g_on_engine_restart_method == nullptr) {
     FML_LOG(ERROR) << "Could not locate onEngineRestart method";
+    return false;
+  }
+
+  g_on_position_platform_view_method =
+      env->GetMethodID(g_flutter_jni_class->obj(), "onPositionPlatformView", "(IFFFF)V");
+
+  if (g_on_position_platform_view_method == nullptr) {
+    FML_LOG(ERROR) << "Could not locate onPositionPlatformView method";
     return false;
   }
 

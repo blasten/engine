@@ -17,7 +17,7 @@ namespace flutter {
 class AndroidSurfaceSoftware final : public AndroidSurface,
                                      public GPUSurfaceSoftwareDelegate {
  public:
-  AndroidSurfaceSoftware();
+  AndroidSurfaceSoftware(fml::jni::JavaObjectWeakGlobalRef java_object);
 
   ~AndroidSurfaceSoftware() override;
 

@@ -8,7 +8,7 @@ import android.content.Context;
 import android.graphics.PixelFormat;
 import android.util.AttributeSet;
 import android.view.SurfaceHolder;
-import android.view.SurfaceView;
+import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import io.flutter.Log;
@@ -17,68 +17,18 @@ import io.flutter.embedding.engine.renderer.FlutterUiDisplayListener;
 import io.flutter.embedding.engine.renderer.RenderSurface;
 
 import android.media.ImageReader;
-import android.graphics.ImageFormat;
 import android.graphics.PixelFormat;
 import android.graphics.Canvas;
 
 
-/**
- * Paints a Flutter UI on a {@link android.view.Surface}.
- *
- * <p>To begin rendering a Flutter UI, the owner of this {@code FlutterSurfaceView} must invoke
- * {@link #attachToRenderer(FlutterRenderer)} with the desired {@link FlutterRenderer}.
- *
- * <p>To stop rendering a Flutter UI, the owner of this {@code FlutterSurfaceView} must invoke
- * {@link #detachFromRenderer()}.
- *
- * <p>A {@code FlutterSurfaceView} is intended for situations where a developer needs to render a
- * Flutter UI, but does not require any keyboard input, gesture input, accessibility integrations or
- * any other interactivity beyond rendering. If standard interactivity is desired, consider using a
- * {@link FlutterView} which provides all of these behaviors and utilizes a {@code
- * FlutterSurfaceView} internally.
- */
-public class FlutterSurfaceView extends SurfaceView implements RenderSurface {
-  private static final String TAG = "FlutterSurfaceView";
+public class FlutterNativeView extends View implements RenderSurface, ImageReader.OnImageAvailableListener  {
+  private static final String TAG = "FlutterNativeView";
+  public static FlutterNativeView instance;
 
-  private final boolean renderTransparently;
+
   private boolean isSurfaceAvailableForRendering = false;
   private boolean isAttachedToFlutterRenderer = false;
   @Nullable private FlutterRenderer flutterRenderer;
-
-  // Connects the {@code Surface} beneath this {@code SurfaceView} with Flutter's native code.
-  // Callbacks are received by this Object and then those messages are forwarded to our
-  // FlutterRenderer, and then on to the JNI bridge over to native Flutter code.
-  private final SurfaceHolder.Callback surfaceCallback =
-      new SurfaceHolder.Callback() {
-        @Override
-        public void surfaceCreated(@NonNull SurfaceHolder holder) {
-          Log.v(TAG, "SurfaceHolder.Callback.startRenderingToSurface()");
-          isSurfaceAvailableForRendering = true;
-
-          if (isAttachedToFlutterRenderer) {
-            connectSurfaceToRenderer();
-          }
-        }
-
-        @Override
-        public void surfaceChanged(
-            @NonNull SurfaceHolder holder, int format, int width, int height) {
-          Log.v(TAG, "SurfaceHolder.Callback.surfaceChanged()");
-          if (isAttachedToFlutterRenderer) {
-            changeSurfaceSize(width, height);
-          }
-        }
-
-        @Override
-        public void surfaceDestroyed(@NonNull SurfaceHolder holder) {
-          Log.v(TAG, "SurfaceHolder.Callback.stopRenderingToSurface()");
-          isSurfaceAvailableForRendering = false;
-
-          if (isAttachedToFlutterRenderer) {
-            disconnectSurfaceFromRenderer();
-          }
-        }
-      };
 
   private final FlutterUiDisplayListener flutterUiDisplayListener =
       new FlutterUiDisplayListener() {
@@ -87,6 +37,7 @@ public class FlutterSurfaceView extends SurfaceView implements RenderSurface {
           Log.v(TAG, "onFlutterUiDisplayed()");
           // Now that a frame is ready to display, take this SurfaceView from transparent to opaque.
           setAlpha(1.0f);
+          invalidate();
 
           if (flutterRenderer != null) {
             flutterRenderer.removeIsDisplayingFlutterUiListener(this);
@@ -99,43 +50,175 @@ public class FlutterSurfaceView extends SurfaceView implements RenderSurface {
         }
       };
 
-  /** Constructs a {@code FlutterSurfaceView} programmatically, without any XML attributes. */
-  public FlutterSurfaceView(@NonNull Context context) {
-    this(context, null, false);
+  public FlutterNativeView(@NonNull Context context) {
+    this(context, null);
   }
-
-  /**
-   * Constructs a {@code FlutterSurfaceView} programmatically, without any XML attributes, and with
-   * control over whether or not this {@code FlutterSurfaceView} renders with transparency.
-   */
-  public FlutterSurfaceView(@NonNull Context context, boolean renderTransparently) {
-    this(context, null, renderTransparently);
-  }
-
-  /** Constructs a {@code FlutterSurfaceView} in an XML-inflation-compliant manner. */
-  public FlutterSurfaceView(@NonNull Context context, @NonNull AttributeSet attrs) {
-    this(context, attrs, false);
-  }
-
-  private FlutterSurfaceView(
-      @NonNull Context context, @Nullable AttributeSet attrs, boolean renderTransparently) {
+ 
+  public FlutterNativeView(@NonNull Context context, @NonNull AttributeSet attrs) {
     super(context, attrs);
-    this.renderTransparently = renderTransparently;
     init();
+    instance = this;
+  }
+
+  // @Override
+  // protected void onSizeChanged(int width, int height, int oldw, int oldh) {
+  //   super.onSizeChanged(width, height, oldw, oldh);
+  //   changeSurfaceSize(width, height);
+  // }
+
+  // @Override
+  // protected void onDetachedFromWindow() {
+  //   super.onDetachedFromWindow();
+  //   Log.v(TAG, "SurfaceHolder.Callback.stopRenderingToSurface()");
+  //   isSurfaceAvailableForRendering = false;
+  //   if (isAttachedToFlutterRenderer) {
+  //     disconnectSurfaceFromRenderer();
+  //   }
+  // }
+  
+  /////////
+  private boolean globalListenersAdded = false;
+  private boolean hasFrame = false;
+
+  private final android.view.ViewTreeObserver.OnPreDrawListener drawListener =
+    new android.view.ViewTreeObserver.OnPreDrawListener() {
+        @Override
+        public boolean onPreDraw() {
+
+            viewCreated();
+            return true;
+        }
+    };
+
+  @Override
+  protected void onAttachedToWindow() {
+    super.onAttachedToWindow();
+
+    if (!globalListenersAdded) {
+      android.view.ViewTreeObserver observer = getViewTreeObserver();
+      observer.addOnPreDrawListener(drawListener);
+      globalListenersAdded = true;
+    }
+  }
+
+  private boolean viewWasCreated = false;
+  private android.graphics.Bitmap bitmap;
+
+  private ImageReader reader;
+
+  private void viewCreated() {
+    if (getWidth() == 0 || getHeight() == 0) {
+      return;
+    }
+    if (viewWasCreated) {
+      return;
+    }
+    viewWasCreated = true;
+
+    // reader = ImageReader.newInstance(
+    //   getWidth(),
+    //   getHeight(),
+    //   PixelFormat.RGBA_8888,
+    //   2);
+
+    reader = ImageReader.newInstance(
+      getWidth(),
+      getHeight(),
+      PixelFormat.RGBA_8888,
+      2,
+      android.hardware.HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE | android.hardware.HardwareBuffer.USAGE_GPU_COLOR_OUTPUT);
+
+    
+    reader.setOnImageAvailableListener(this, null);
+
+    Log.v(TAG, "SurfaceHolder.Callback.startRenderingToSurface()");
+    isSurfaceAvailableForRendering = true;
+
+    if (isAttachedToFlutterRenderer) {
+      connectSurfaceToRenderer();
+    }
+  }
+
+  public int numImage = 0;
+  @Override
+  public void onImageAvailable(ImageReader reader) {
+    numImage++;
+    Log.e("flutter", "==============================> IMAGE available " + numImage);
+
+    // this.invalidate();
+  }
+
+
+
+  ///
+  /// 
+  private android.media.Image image;
+  public void acquireLatestImage() {
+    // if (numImage == 0) {
+    //   return;
+    // }
+    image = reader.acquireLatestImage();
+    invalidate();
+  }
+
+            // io.flutter.embedding.android.FlutterNativeView.instance.image = io.flutter.embedding.android.FlutterNativeView.instance.reader.acquireLastestImage();
+
+
+  @Override
+  protected void onDraw(Canvas canvas) {
+    super.onDraw(canvas);
+    if (image == null) {
+      return;
+    }
+    long tStart = System.currentTimeMillis();
+
+
+    android.hardware.HardwareBuffer buffer = image.getHardwareBuffer();
+    bitmap = android.graphics.Bitmap.wrapHardwareBuffer(buffer, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB));
+    canvas.drawBitmap(bitmap, 0, 0, null);
+
+
+    // android.media.Image.Plane[] imagePlanes = image.getPlanes();
+    // if (imagePlanes.length != 1) {
+    //   Log.e("flutter", "==============================> PLANES.LENGTH != 1 ");
+    //   return;
+    // }
+
+    // android.media.Image.Plane imagePlane = imagePlanes[0];
+    // java.nio.ByteBuffer byteBuffer = imagePlane.getBuffer();
+
+    // int desiredWidth = imagePlane.getRowStride() / imagePlane.getPixelStride();
+    // int desiredHeight = image.getHeight();
+
+    // if (bitmap == null) {
+    //   bitmap = android.graphics.Bitmap.createBitmap(
+    //     desiredWidth,
+    //     desiredHeight,
+    //     android.graphics.Bitmap.Config.ARGB_8888
+    //   );
+    // }
+
+    // bitmap.copyPixelsFromBuffer(byteBuffer);
+
+    image.close();
+    // canvas.drawBitmap(bitmap, 0, 0, null);
+    long tEnd = System.currentTimeMillis();
+    long tDelta = tEnd - tStart;
+
+    Log.e("flutter", "==============================>  got image " + tDelta + ",  available:" + numImage);
+
+    image = null;
+    // android.hardware.HardwareBuffer buffer = image.getHardwareBuffer();
+
+
+    // android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+    // android.graphics.Bitmap bitmap = android.graphics.Bitmap.wrapHardwareBuffer(
+    //   buffer,
+    //   android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB));
+    // 
   }
 
   private void init() {
-    // If transparency is desired then we'll enable a transparent pixel format and place
-    // our Window above everything else to get transparent background rendering.
-    if (renderTransparently) {
-      getHolder().setFormat(PixelFormat.TRANSPARENT);
-      setZOrderOnTop(true);
-    }
-
-    // Grab a reference to our underlying Surface and register callbacks with that Surface so we
-    // can monitor changes and forward those changes on to native Flutter code.
-    getHolder().addCallback(surfaceCallback);
-
     // Keep this SurfaceView transparent until Flutter has a frame ready to render. This avoids
     // displaying a black rectangle in our place.
     setAlpha(0.0f);
@@ -217,11 +300,11 @@ public class FlutterSurfaceView extends SurfaceView implements RenderSurface {
 
   // FlutterRenderer and getSurfaceTexture() must both be non-null.
   private void connectSurfaceToRenderer() {
-    if (flutterRenderer == null || getHolder() == null) {
+    if (flutterRenderer == null) {
       throw new IllegalStateException(
-          "connectSurfaceToRenderer() should only be called when flutterRenderer and getHolder() are non-null.");
+          "connectSurfaceToRenderer() should only be called when flutterRenderer is non-null.");
     }
-    flutterRenderer.startRenderingToSurface(getHolder().getSurface());
+    flutterRenderer.startRenderingToSurface(reader.getSurface());
   }
 
   // FlutterRenderer must be non-null.
@@ -246,7 +329,6 @@ public class FlutterSurfaceView extends SurfaceView implements RenderSurface {
       throw new IllegalStateException(
           "disconnectSurfaceFromRenderer() should only be called when flutterRenderer is non-null.");
     }
-
     flutterRenderer.stopRenderingToSurface();
   }
 }

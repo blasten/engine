@@ -304,7 +304,13 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
     this.textureRegistry = textureRegistry;
     platformViewsChannel = new PlatformViewsChannel(dartExecutor);
     platformViewsChannel.setPlatformViewsHandler(channelHandler);
+
+    webView = new android.webkit.WebView(context);
+    webView.getSettings().setJavaScriptEnabled(true);
+    webView.loadUrl("https://flutter.dev/");
   }
+
+  private android.webkit.WebView webView;
 
   /**
    * Detaches this platform views controller.
@@ -423,6 +429,26 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
 
   public void onPreEngineRestart() {
     flushAllViews();
+  }
+
+  public void onPositionPlatformView(int viewId, float x, float y, float width, float height) {
+    // new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+    //   @Override
+    //   public void run() {
+        Log.e("flutter", "onPositionPlatformView(" + viewId + ", " + x + ", " + y + ", " + width + ", " + height);
+        float density = context.getResources().getDisplayMetrics().density;
+        android.widget.FrameLayout.LayoutParams layoutParams = new android.widget.FrameLayout.LayoutParams((int) (width * density), (int) (height * density));
+        layoutParams.leftMargin = (int) x;
+        layoutParams.topMargin = (int) y;
+        webView.setLayoutParams(layoutParams);
+        if (webView.getParent() == null) {
+            ((android.widget.FrameLayout)flutterView).addView(webView);
+        }
+        if (io.flutter.embedding.android.FlutterNativeView.instance != null) {
+          // io.flutter.embedding.android.FlutterNativeView.instance.image = io.flutter.embedding.android.FlutterNativeView.instance.reader.acquireLastestImage();
+          io.flutter.embedding.android.FlutterNativeView.instance.acquireLatestImage();
+        }
+    // }});
   }
 
   @Override

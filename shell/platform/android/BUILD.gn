@@ -52,6 +52,8 @@ shared_library("flutter_shell_native") {
     "platform_view_android_jni.h",
     "vsync_waiter_android.cc",
     "vsync_waiter_android.h",
+    "external_view_embedder/external_view_embedder.cc",
+    "external_view_embedder/external_view_embedder.h",
   ]
 
   deps = [
@@ -65,7 +67,6 @@ shared_library("flutter_shell_native") {
     "//flutter/runtime",
     "//flutter/runtime:libdart",
     "//flutter/shell/common",
-    "//flutter/shell/platform/android/external_view_embedder",
     "//third_party/skia",
   ]
 
@@ -135,6 +136,7 @@ android_java_sources = [
   "io/flutter/embedding/android/FlutterEngineProvider.java",
   "io/flutter/embedding/android/FlutterFragment.java",
   "io/flutter/embedding/android/FlutterFragmentActivity.java",
+  "io/flutter/embedding/android/FlutterNativeView.java",
   "io/flutter/embedding/android/FlutterSplashView.java",
   "io/flutter/embedding/android/FlutterSurfaceView.java",
   "io/flutter/embedding/android/FlutterTextureView.java",

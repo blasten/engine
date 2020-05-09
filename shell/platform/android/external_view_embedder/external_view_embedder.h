@@ -5,14 +5,17 @@
 #ifndef FLUTTER_SHELL_PLATFORM_ANDROID_EXTERNAL_VIEW_EMBEDDER_H_
 #define FLUTTER_SHELL_PLATFORM_ANDROID_EXTERNAL_VIEW_EMBEDDER_H_
 
+#include "flutter/fml/platform/android/jni_util.h"
+#include "flutter/fml/platform/android/jni_weak_ref.h"
 #include "flutter/flow/embedded_views.h"
-
 #include "third_party/skia/include/core/SkPictureRecorder.h"
 
 namespace flutter {
 
 class AndroidExternalViewEmbedder : public ExternalViewEmbedder {
  public:
+  AndroidExternalViewEmbedder(fml::jni::JavaObjectWeakGlobalRef java_object);
+
   // |ExternalViewEmbedder|
   void PrerollCompositeEmbeddedView(
       int view_id,
@@ -61,6 +64,11 @@ class AndroidExternalViewEmbedder : public ExternalViewEmbedder {
   // contains any subsequent operation until the next platform view or the end
   // of the last leaf node in the layer tree.
   std::map<int64_t, std::unique_ptr<SkPictureRecorder>> picture_recorders_;
+
+
+  std::map<int64_t, EmbeddedViewParams> current_composition_params_;
+
+  fml::jni::JavaObjectWeakGlobalRef java_object_;
 
   /// Resets the state.
   void ClearFrame();

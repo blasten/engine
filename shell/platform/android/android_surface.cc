@@ -15,16 +15,16 @@
 namespace flutter {
 
 std::unique_ptr<AndroidSurface> AndroidSurface::Create(
-    bool use_software_rendering) {
+    bool use_software_rendering, fml::jni::JavaObjectWeakGlobalRef java_object) {
   if (use_software_rendering) {
-    auto software_surface = std::make_unique<AndroidSurfaceSoftware>();
+    auto software_surface = std::make_unique<AndroidSurfaceSoftware>(java_object);
     return software_surface->IsValid() ? std::move(software_surface) : nullptr;
   }
 #if SHELL_ENABLE_VULKAN
-  auto vulkan_surface = std::make_unique<AndroidSurfaceVulkan>();
+  auto vulkan_surface = std::make_unique<AndroidSurfaceVulkan>(java_object);
   return vulkan_surface->IsValid() ? std::move(vulkan_surface) : nullptr;
 #else   // SHELL_ENABLE_VULKAN
-  auto gl_surface = std::make_unique<AndroidSurfaceGL>();
+  auto gl_surface = std::make_unique<AndroidSurfaceGL>(java_object);
   return gl_surface->IsOffscreenContextValid() ? std::move(gl_surface)
                                                : nullptr;
 #endif  // SHELL_ENABLE_VULKAN

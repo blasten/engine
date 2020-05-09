@@ -36,6 +36,8 @@ void FlutterViewOnFirstFrame(JNIEnv* env, jobject obj);
 
 void FlutterViewOnPreEngineRestart(JNIEnv* env, jobject obj);
 
+void FlutterViewOnPositionPlatformView(JNIEnv* env, jobject obj, jint view_id, jfloat x, jfloat y, jfloat width, jfloat height);
+
 void SurfaceTextureAttachToGLContext(JNIEnv* env, jobject obj, jint textureId);
 
 void SurfaceTextureUpdateTexImage(JNIEnv* env, jobject obj);

@@ -25,7 +25,7 @@ PlatformViewAndroid::PlatformViewAndroid(
     bool use_software_rendering)
     : PlatformView(delegate, std::move(task_runners)),
       java_object_(java_object),
-      android_surface_(AndroidSurface::Create(use_software_rendering)) {
+      android_surface_(AndroidSurface::Create(use_software_rendering, java_object)) {
   FML_CHECK(android_surface_)
       << "Could not create an OpenGL, Vulkan or Software surface to setup "
          "rendering.";

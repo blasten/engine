@@ -40,7 +40,7 @@ fml::RefPtr<fml::TaskRunner> TaskRunners::GetIOTaskRunner() const {
 }
 
 fml::RefPtr<fml::TaskRunner> TaskRunners::GetRasterTaskRunner() const {
-  return raster_;
+  return platform_;
 }
 
 bool TaskRunners::IsValid() const {

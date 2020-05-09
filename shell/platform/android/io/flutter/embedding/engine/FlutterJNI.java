@@ -773,6 +773,16 @@ public class FlutterJNI {
       listener.onPreEngineRestart();
     }
   }
+
+  @SuppressWarnings("unused")
+  @UiThread
+  private void onPositionPlatformView(int viewId, float x, float y, float width, float height) {
+    ensureRunningOnMainThread();
+    for (EngineLifecycleListener listener : engineLifecycleListeners) {
+      listener.onPositionPlatformView(viewId, x, y, width, height);
+    }
+  }
+
   // ----- End Engine Lifecycle Support ----
 
   // TODO(mattcarroll): determine if this is nonull or nullable
