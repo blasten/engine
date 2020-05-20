@@ -54,6 +54,8 @@ shared_library("flutter_shell_native") {
     "vsync_waiter_android.h",
     "external_view_embedder/external_view_embedder.cc",
     "external_view_embedder/external_view_embedder.h",
+    "external_view_embedder/pool.cc",
+    "external_view_embedder/pool.h",
   ]
 
   deps = [
@@ -67,6 +69,7 @@ shared_library("flutter_shell_native") {
     "//flutter/runtime",
     "//flutter/runtime:libdart",
     "//flutter/shell/common",
+#   "//flutter/shell/platform/android/external_view_embedder",
     "//third_party/skia",
   ]
 

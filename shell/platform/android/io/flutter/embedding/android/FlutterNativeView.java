@@ -23,11 +23,11 @@ import android.graphics.Canvas;
 
 public class FlutterNativeView extends View implements RenderSurface, ImageReader.OnImageAvailableListener  {
   private static final String TAG = "FlutterNativeView";
-  public static FlutterNativeView instance;
-
 
   private boolean isSurfaceAvailableForRendering = false;
   private boolean isAttachedToFlutterRenderer = false;
+  private boolean isOverlay = false;
+
   @Nullable private FlutterRenderer flutterRenderer;
 
   private final FlutterUiDisplayListener flutterUiDisplayListener =
@@ -51,13 +51,16 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
       };
 
   public FlutterNativeView(@NonNull Context context) {
-    this(context, null);
+    this(context, null, null);
   }
  
-  public FlutterNativeView(@NonNull Context context, @NonNull AttributeSet attrs) {
+  public FlutterNativeView(@NonNull Context context, @Nullable AttributeSet attrs, @Nullable ImageReader reader) {
     super(context, attrs);
     init();
-    instance = this;
+    if (reader != null) {
+      this.reader = reader;
+      this.isOverlay = true;
+    }
   }
 
   // @Override
@@ -76,7 +79,6 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
   //   }
   // }
   
-  /////////
   private boolean globalListenersAdded = false;
   private boolean hasFrame = false;
 
@@ -84,7 +86,6 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
     new android.view.ViewTreeObserver.OnPreDrawListener() {
         @Override
         public boolean onPreDraw() {
-
             viewCreated();
             return true;
         }
@@ -94,7 +95,7 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
   protected void onAttachedToWindow() {
     super.onAttachedToWindow();
 
-    if (!globalListenersAdded) {
+    if (!isOverlay && !globalListenersAdded) {
       android.view.ViewTreeObserver observer = getViewTreeObserver();
       observer.addOnPreDrawListener(drawListener);
       globalListenersAdded = true;
@@ -115,12 +116,6 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
     }
     viewWasCreated = true;
 
-    // reader = ImageReader.newInstance(
-    //   getWidth(),
-    //   getHeight(),
-    //   PixelFormat.RGBA_8888,
-    //   2);
-
     reader = ImageReader.newInstance(
       getWidth(),
       getHeight(),
@@ -128,10 +123,8 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
       2,
       android.hardware.HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE | android.hardware.HardwareBuffer.USAGE_GPU_COLOR_OUTPUT);
 
-    
     reader.setOnImageAvailableListener(this, null);
 
-    Log.v(TAG, "SurfaceHolder.Callback.startRenderingToSurface()");
     isSurfaceAvailableForRendering = true;
 
     if (isAttachedToFlutterRenderer) {
@@ -144,39 +137,36 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
   public void onImageAvailable(ImageReader reader) {
     numImage++;
     Log.e("flutter", "==============================> IMAGE available " + numImage);
-
     // this.invalidate();
   }
 
-
-
   ///
   /// 
-  private android.media.Image image;
+  @Nullable private android.hardware.HardwareBuffer hardwareBuffer;
   public void acquireLatestImage() {
-    // if (numImage == 0) {
-    //   return;
-    // }
-    image = reader.acquireLatestImage();
+    if (reader == null) {
+      Log.d("flutter", " (NO READER) ");
+      return;
+    }
+    android.media.Image image = reader.acquireLatestImage();
+    if (image == null) {
+      Log.d("flutter", " (NO IMAGE) ");
+      return;
+    }
+    hardwareBuffer = image.getHardwareBuffer();
+    image.close();
     invalidate();
   }
-
-            // io.flutter.embedding.android.FlutterNativeView.instance.image = io.flutter.embedding.android.FlutterNativeView.instance.reader.acquireLastestImage();
-
 
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
-    if (image == null) {
+    if (hardwareBuffer == null) {
       return;
     }
-    long tStart = System.currentTimeMillis();
-
-
-    android.hardware.HardwareBuffer buffer = image.getHardwareBuffer();
-    bitmap = android.graphics.Bitmap.wrapHardwareBuffer(buffer, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB));
+    bitmap = android.graphics.Bitmap.wrapHardwareBuffer(hardwareBuffer, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB));
     canvas.drawBitmap(bitmap, 0, 0, null);
-
+    hardwareBuffer = null;
 
     // android.media.Image.Plane[] imagePlanes = image.getPlanes();
     // if (imagePlanes.length != 1) {
@@ -199,23 +189,6 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
     // }
 
     // bitmap.copyPixelsFromBuffer(byteBuffer);
-
-    image.close();
-    // canvas.drawBitmap(bitmap, 0, 0, null);
-    long tEnd = System.currentTimeMillis();
-    long tDelta = tEnd - tStart;
-
-    Log.e("flutter", "==============================>  got image " + tDelta + ",  available:" + numImage);
-
-    image = null;
-    // android.hardware.HardwareBuffer buffer = image.getHardwareBuffer();
-
-
-    // android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-    // android.graphics.Bitmap bitmap = android.graphics.Bitmap.wrapHardwareBuffer(
-    //   buffer,
-    //   android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB));
-    // 
   }
 
   private void init() {

@@ -27,7 +27,7 @@ class AndroidSurface {
 
   virtual void TeardownOnScreenContext() = 0;
 
-  virtual std::unique_ptr<Surface> CreateGPUSurface() = 0;
+  virtual std::unique_ptr<Surface> CreateGPUSurface(GrContext* gr_context = nullptr) = 0;
 
   virtual bool OnScreenSurfaceResize(const SkISize& size) const = 0;
 

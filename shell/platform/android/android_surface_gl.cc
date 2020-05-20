@@ -14,11 +14,14 @@ namespace flutter {
 static fml::RefPtr<AndroidContextGL> CreateResourceLoadingContext() {
   auto environment = fml::MakeRefCounted<AndroidEnvironmentGL>();
   if (!environment->IsValid()) {
+    FML_LOG(ERROR) << "(hybrid) environment isn't valid";
+
     return nullptr;
   }
 
   auto context = fml::MakeRefCounted<AndroidContextGL>(environment);
   if (!context->IsValid()) {
+    FML_LOG(ERROR) << "(hybrid)  context isn't valid";
     return nullptr;
   }
 
@@ -28,10 +31,13 @@ static fml::RefPtr<AndroidContextGL> CreateResourceLoadingContext() {
 AndroidSurfaceGL::AndroidSurfaceGL(fml::jni::JavaObjectWeakGlobalRef java_object) {
   // Acquire the offscreen context.
   offscreen_context_ = CreateResourceLoadingContext();
-
+ 
   if (!offscreen_context_ || !offscreen_context_->IsValid()) {
+    FML_LOG(ERROR) << "(hybrid) offscreen_context_ is NULL";
     offscreen_context_ = nullptr;
   }
+
+  FML_LOG(ERROR) << "(hybrid) CREATED AndroidSurfaceGL";
 
   external_view_embedder_ = std::make_unique<AndroidExternalViewEmbedder>(java_object);
 }
@@ -57,9 +63,11 @@ bool AndroidSurfaceGL::IsValid() const {
   return onscreen_context_->IsValid() && offscreen_context_->IsValid();
 }
 
-std::unique_ptr<Surface> AndroidSurfaceGL::CreateGPUSurface() {
-  auto surface = std::make_unique<GPUSurfaceGL>(this, true);
-  return surface->IsValid() ? std::move(surface) : nullptr;
+std::unique_ptr<Surface> AndroidSurfaceGL::CreateGPUSurface(GrContext* gr_context) {
+  if (gr_context) {
+    return std::make_unique<GPUSurfaceGL>(sk_ref_sp(gr_context), this, true);
+  }
+  return std::make_unique<GPUSurfaceGL>(this, true);
 }
 
 bool AndroidSurfaceGL::OnScreenSurfaceResize(const SkISize& size) const {
@@ -85,6 +93,7 @@ bool AndroidSurfaceGL::SetNativeWindow(
   // If the offscreen context has not been setup, we dont have the sharegroup.
   // So bail.
   if (!offscreen_context_ || !offscreen_context_->IsValid()) {
+    FML_LOG(ERROR) << "(hybrid) offscreen_context_ isn't valid";
     return false;
   }
 
@@ -94,20 +103,26 @@ bool AndroidSurfaceGL::SetNativeWindow(
       offscreen_context_.get() /* sharegroup */);
 
   if (!onscreen_context_->IsValid()) {
+    FML_LOG(ERROR) << "(hybrid) on screen isn't valid";
     onscreen_context_ = nullptr;
     return false;
   }
 
   if (!onscreen_context_->CreateWindowSurface(std::move(window))) {
+    FML_LOG(ERROR) << "(hybrid) cannot create CreateWindowSurface";
+
     onscreen_context_ = nullptr;
     return false;
   }
 
+  FML_LOG(ERROR) << "(hybrid) SetNativeWindow";
   return true;
 }
 
 bool AndroidSurfaceGL::GLContextMakeCurrent() {
-  FML_DCHECK(onscreen_context_ && onscreen_context_->IsValid());
+  FML_LOG(ERROR) << "(hybrid) AndroidSurfaceGL::GLContextMakeCurrent";
+  FML_DCHECK(onscreen_context_);
+  FML_DCHECK(onscreen_context_->IsValid());
   return onscreen_context_->MakeCurrent();
 }
 

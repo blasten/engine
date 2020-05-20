@@ -124,6 +124,13 @@ void FlutterViewOnPositionPlatformView(JNIEnv* env, jobject obj, jint view_id, j
   FML_CHECK(CheckException(env));
 }
 
+static jmethodID g_create_overlay_layer_method = nullptr;
+fml::RefPtr<AndroidNativeWindow> FlutterViewCreateOverlayLayer(JNIEnv* env, jobject obj) {
+  jobject jsurface = env->CallObjectMethod(obj, g_create_overlay_layer_method);
+  FML_CHECK(CheckException(env));
+  return fml::MakeRefCounted<AndroidNativeWindow>(ANativeWindow_fromSurface(env, jsurface));
+}
+
 static jmethodID g_attach_to_gl_context_method = nullptr;
 void SurfaceTextureAttachToGLContext(JNIEnv* env, jobject obj, jint textureId) {
   env->CallVoidMethod(obj, g_attach_to_gl_context_method, textureId);
@@ -730,6 +737,14 @@ bool RegisterApi(JNIEnv* env) {
 
   if (g_on_position_platform_view_method == nullptr) {
     FML_LOG(ERROR) << "Could not locate onPositionPlatformView method";
+    return false;
+  }
+
+  g_create_overlay_layer_method =
+      env->GetMethodID(g_flutter_jni_class->obj(), "createOverlayLayer", "()Landroid/view/Surface;");
+
+  if (g_create_overlay_layer_method == nullptr) {
+    FML_LOG(ERROR) << "Could not locate createOverlayLayer method";
     return false;
   }
 

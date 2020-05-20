@@ -14,9 +14,11 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.Surface;
 import androidx.annotation.NonNull;
 import androidx.annotation.UiThread;
 import androidx.annotation.VisibleForTesting;
+import io.flutter.embedding.android.FlutterView;
 import io.flutter.embedding.engine.dart.DartExecutor;
 import io.flutter.embedding.engine.systemchannels.PlatformViewsChannel;
 import io.flutter.plugin.editing.TextInputPlugin;
@@ -444,10 +446,11 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
         if (webView.getParent() == null) {
             ((android.widget.FrameLayout)flutterView).addView(webView);
         }
-        if (io.flutter.embedding.android.FlutterNativeView.instance != null) {
-          // io.flutter.embedding.android.FlutterNativeView.instance.image = io.flutter.embedding.android.FlutterNativeView.instance.reader.acquireLastestImage();
-          io.flutter.embedding.android.FlutterNativeView.instance.acquireLatestImage();
-        }
+        ((FlutterView)flutterView).adquireLatestSurfaceImage();
+        // if (io.flutter.embedding.android.FlutterNativeView.instance != null) {
+        //   // io.flutter.embedding.android.FlutterNativeView.instance.image = io.flutter.embedding.android.FlutterNativeView.instance.reader.acquireLastestImage();
+        //   io.flutter.embedding.android.FlutterNativeView.instance.acquireLatestImage();
+        // }
     // }});
   }
 
@@ -558,5 +561,12 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
       controller.dispose();
     }
     vdControllers.clear();
+  }
+
+  public Surface createOverlayLayer() {
+    if (flutterView == null) {
+      throw new RuntimeException("Cannot create an overlay layer without a flutter view");
+    }
+    return ((FlutterView)flutterView).createOverlayLayer();
   }
 }

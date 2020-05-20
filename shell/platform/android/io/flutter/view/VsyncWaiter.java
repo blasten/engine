@@ -8,9 +8,7 @@ import android.view.Choreographer;
 import android.view.WindowManager;
 import androidx.annotation.NonNull;
 import io.flutter.embedding.engine.FlutterJNI;
-import io.flutter.embedding.android.FlutterNativeView;
 import io.flutter.Log;
-
 
 // TODO(mattcarroll): add javadoc.
 public class VsyncWaiter {
@@ -36,18 +34,10 @@ public class VsyncWaiter {
                     @Override
                     public void doFrame(long frameTimeNanos) {
                       Log.e("flutter", " ============= doFrame ============= ");
-
-
-
                       float fps = windowManager.getDefaultDisplay().getRefreshRate();
                       long refreshPeriodNanos = (long) (1000000000.0 / fps);
                       FlutterJNI.nativeOnVsync(
                           frameTimeNanos, frameTimeNanos + refreshPeriodNanos, cookie);
-
-                      if (FlutterNativeView.instance != null && FlutterNativeView.instance.numImage > 0) {
-                        // Log.e("flutter", " ===================== INVALIDATE ============ ");
-                        // FlutterNativeView.instance.invalidate();
-                      }
                     }
                   });
         }

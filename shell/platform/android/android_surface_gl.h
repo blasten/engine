@@ -30,7 +30,7 @@ class AndroidSurfaceGL final : public GPUSurfaceGLDelegate,
   bool IsValid() const override;
 
   // |AndroidSurface|
-  std::unique_ptr<Surface> CreateGPUSurface() override;
+  std::unique_ptr<Surface> CreateGPUSurface(GrContext* gr_context) override;
 
   // |AndroidSurface|
   void TeardownOnScreenContext() override;

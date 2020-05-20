@@ -5,9 +5,11 @@
 #ifndef FLUTTER_SHELL_PLATFORM_ANDROID_EXTERNAL_VIEW_EMBEDDER_H_
 #define FLUTTER_SHELL_PLATFORM_ANDROID_EXTERNAL_VIEW_EMBEDDER_H_
 
+#include "flutter/flow/rtree.h"
 #include "flutter/fml/platform/android/jni_util.h"
 #include "flutter/fml/platform/android/jni_weak_ref.h"
 #include "flutter/flow/embedded_views.h"
+#include "flutter/shell/platform/android/external_view_embedder/pool.h"
 #include "third_party/skia/include/core/SkPictureRecorder.h"
 
 namespace flutter {
@@ -53,6 +55,8 @@ class AndroidExternalViewEmbedder : public ExternalViewEmbedder {
       fml::RefPtr<fml::RasterThreadMerger> raster_thread_merger) override;
 
  private:
+  static const size_t kMaxLayerAllocations = 2;
+  
   // The size of the background canvas.
   SkISize frame_size_;
 
@@ -65,6 +69,10 @@ class AndroidExternalViewEmbedder : public ExternalViewEmbedder {
   // of the last leaf node in the layer tree.
   std::map<int64_t, std::unique_ptr<SkPictureRecorder>> picture_recorders_;
 
+  std::map<int64_t, sk_sp<RTree>> platform_view_rtrees_;
+
+  // The pool of reusable view layers. The pool allows to recycle layer in each frame.
+  std::unique_ptr<platform_view::Pool> layer_pool_;
 
   std::map<int64_t, EmbeddedViewParams> current_composition_params_;
 
@@ -72,6 +80,14 @@ class AndroidExternalViewEmbedder : public ExternalViewEmbedder {
 
   /// Resets the state.
   void ClearFrame();
+
+  std::shared_ptr<platform_view::OverlayLayer> GetLayer(GrContext* gr_context,
+                                                        sk_sp<SkPicture> picture,
+                                                        SkRect rect,
+                                                        int64_t view_id,
+                                                        int64_t overlay_id);
+
+  SkRect GetPlatformViewRect(int view_id);
 };
 
 }  // namespace flutter

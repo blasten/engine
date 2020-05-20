@@ -22,6 +22,7 @@ import io.flutter.embedding.engine.dart.PlatformMessageHandler;
 import io.flutter.embedding.engine.renderer.FlutterUiDisplayListener;
 import io.flutter.embedding.engine.renderer.RenderSurface;
 import io.flutter.plugin.common.StandardMessageCodec;
+import io.flutter.plugin.platform.PlatformViewsController;
 import io.flutter.view.AccessibilityBridge;
 import io.flutter.view.FlutterCallbackInformation;
 import java.nio.ByteBuffer;
@@ -161,6 +162,8 @@ public class FlutterJNI {
   @Nullable private Long nativePlatformViewId;
   @Nullable private AccessibilityDelegate accessibilityDelegate;
   @Nullable private PlatformMessageHandler platformMessageHandler;
+  @Nullable private PlatformViewsController platformViewsController;
+
 
   @NonNull
   private final Set<EngineLifecycleListener> engineLifecycleListeners = new CopyOnWriteArraySet<>();
@@ -170,6 +173,8 @@ public class FlutterJNI {
       new CopyOnWriteArraySet<>();
 
   @NonNull private final Looper mainLooper; // cached to avoid synchronization on repeat access.
+
+
 
   public FlutterJNI() {
     // We cache the main looper so that we can ensure calls are made on the main thread
@@ -407,6 +412,12 @@ public class FlutterJNI {
   private native void nativeDispatchPointerDataPacket(
       long nativePlatformViewId, @NonNull ByteBuffer buffer, int position);
   // ------ End Touch Interaction Support ---
+
+  @UiThread
+  public void setPlatformViewsController(@NonNull PlatformViewsController platformViewsController) {
+    ensureRunningOnMainThread();
+    this.platformViewsController = platformViewsController;
+  }
 
   // ------ Start Accessibility Support -----
   /**
@@ -776,11 +787,22 @@ public class FlutterJNI {
 
   @SuppressWarnings("unused")
   @UiThread
+  private Surface createOverlayLayer() {
+    ensureRunningOnMainThread();
+    if (platformViewsController == null) {
+      throw new RuntimeException("platformViewsController must be set before attempting to create an overlay layer");
+    }
+    return platformViewsController.createOverlayLayer();
+  }
+
+  @SuppressWarnings("unused")
+  @UiThread
   private void onPositionPlatformView(int viewId, float x, float y, float width, float height) {
     ensureRunningOnMainThread();
-    for (EngineLifecycleListener listener : engineLifecycleListeners) {
-      listener.onPositionPlatformView(viewId, x, y, width, height);
+    if (platformViewsController == null) {
+      throw new RuntimeException("platformViewsController must be set before attempting to position an overlay layer");
     }
+    platformViewsController.onPositionPlatformView(viewId, x, y, width, height);
   }
 
   // ----- End Engine Lifecycle Support ----

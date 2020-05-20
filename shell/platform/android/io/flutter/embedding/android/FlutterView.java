@@ -17,6 +17,7 @@ import android.util.AttributeSet;
 import android.util.SparseArray;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.Surface;
 import android.view.View;
 import android.view.ViewStructure;
 import android.view.WindowInsets;
@@ -26,6 +27,9 @@ import android.view.autofill.AutofillValue;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.widget.FrameLayout;
+import android.media.ImageReader;
+import android.graphics.PixelFormat;
+import android.hardware.HardwareBuffer;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -79,6 +83,8 @@ public class FlutterView extends FrameLayout {
   // Internal view hierarchy references.
   @Nullable private View flutterView;
   private final Set<FlutterUiDisplayListener> flutterUiDisplayListeners = new HashSet<>();
+  private final List<FlutterNativeView> overlayLayerViews = new ArrayList<>();
+
   private boolean isFlutterUiDisplayed;
 
   // Connections to a Flutter execution context.
@@ -160,7 +166,9 @@ public class FlutterView extends FrameLayout {
     if (renderMode == RenderMode.surface) {
       flutterView = new FlutterSurfaceView(context);
     } else if (renderMode == RenderMode.view) {
-      flutterView = new FlutterNativeView(context);
+      FlutterNativeView nativeView = new FlutterNativeView(context);
+      flutterView = nativeView;
+      overlayLayerViews.add(nativeView);
     } else {
       flutterView = new FlutterTextureView(context);
     }
@@ -245,8 +253,10 @@ public class FlutterView extends FrameLayout {
     if (renderMode == RenderMode.surface) {
       flutterView =
           new FlutterSurfaceView(context, transparencyMode == TransparencyMode.transparent);
-    } if (renderMode == RenderMode.view) {
-      flutterView = new FlutterNativeView(context);
+    } else if (renderMode == RenderMode.view) {
+      FlutterNativeView nativeView = new FlutterNativeView(context);
+      flutterView = nativeView;
+      overlayLayerViews.add(nativeView);
     } else {
       flutterView = new FlutterTextureView(context);
     }
@@ -284,6 +294,7 @@ public class FlutterView extends FrameLayout {
     super(context, attrs);
 
     this.flutterView = flutterNativeView;
+    overlayLayerViews.add(flutterNativeView);
 
     init();
   }
@@ -1026,5 +1037,27 @@ public class FlutterView extends FrameLayout {
      * FlutterView}.
      */
     void onFlutterEngineDetachedFromFlutterView();
+  }
+
+  public Surface createOverlayLayer() {
+    Log.d("flutter", "/////////////////////// ---> Creating image reader of size " + getWidth() + "x" + getHeight());
+
+    ImageReader reader = ImageReader.newInstance(
+      getWidth(),
+      getHeight(),
+      PixelFormat.RGBA_8888,
+      2,
+      HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE | HardwareBuffer.USAGE_GPU_COLOR_OUTPUT);
+
+    FlutterNativeView view = new FlutterNativeView(getContext(), /*attrs=*/ null, /*reader=*/ reader);
+    overlayLayerViews.add(view);
+    return reader.getSurface();
+  }
+
+  public void adquireLatestSurfaceImage() {
+    Log.d("flutter", "Number of overlays: " + overlayLayerViews.size());
+    for (FlutterNativeView view : overlayLayerViews) {
+      view.acquireLatestImage();
+    }
   }
 }

@@ -225,14 +225,8 @@ SkMatrix GPUSurfaceGL::GetRootTransformation() const {
 }
 
 // |Surface|
-std::unique_ptr<SurfaceFrame> GPUSurfaceGL::AcquireFrame(const SkISize& size) {
+std::unique_ptr<SurfaceFrame> GPUSurfaceGL::AcquireFrame(const SkISize& size, bool debug) {
   if (delegate_ == nullptr) {
-    return nullptr;
-  }
-
-  if (!delegate_->GLContextMakeCurrent()) {
-    FML_LOG(ERROR)
-        << "Could not make the context current to acquire the frame.";
     return nullptr;
   }
 
@@ -271,6 +265,12 @@ bool GPUSurfaceGL::PresentSurface(SkCanvas* canvas) {
     return false;
   }
 
+  if (!delegate_->GLContextMakeCurrent()) {
+    FML_LOG(ERROR)
+        << "Could not make the context current to acquire the frame.";
+    return false;
+  }
+
   {
     TRACE_EVENT0("flutter", "SkCanvas::Flush");
     onscreen_surface_->getCanvas()->flush();
@@ -298,6 +298,11 @@ bool GPUSurfaceGL::PresentSurface(SkCanvas* canvas) {
 
     onscreen_surface_ = std::move(new_onscreen_surface);
   }
+
+  FML_LOG(ERROR)
+        << "GPUSurfaceGL::PresentSurface(SkCanvas* canvas) = clear context";
+
+  delegate_->GLContextClearCurrent();
 
   return true;
 }
