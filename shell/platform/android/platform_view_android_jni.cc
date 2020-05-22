@@ -124,11 +124,23 @@ void FlutterViewOnPositionPlatformView(JNIEnv* env, jobject obj, jint view_id, j
   FML_CHECK(CheckException(env));
 }
 
-static jmethodID g_create_overlay_layer_method = nullptr;
-fml::RefPtr<AndroidNativeWindow> FlutterViewCreateOverlayLayer(JNIEnv* env, jobject obj) {
-  jobject jsurface = env->CallObjectMethod(obj, g_create_overlay_layer_method);
+static jmethodID g_on_position_overlay_layer_method = nullptr;
+void FlutterViewPositionOverlayLayer(JNIEnv* env, jobject obj, jlong id, jfloat x, jfloat y, jfloat width, jfloat height) {
+  env->CallVoidMethod(obj, g_on_position_overlay_layer_method, id, x, y, width, height);
   FML_CHECK(CheckException(env));
-  return fml::MakeRefCounted<AndroidNativeWindow>(ANativeWindow_fromSurface(env, jsurface));
+}
+
+static jmethodID g_create_overlay_layer_method = nullptr;
+static jmethodID g_flutter_overlay_layer_get_id_method  = nullptr;
+static jmethodID g_flutter_overlay_layer_get_surface_method  = nullptr;
+
+std::unique_ptr<AndroidFlutterOverlayLayer> FlutterViewCreateOverlayLayer(JNIEnv* env, jobject obj) {
+  jobject joverlay_layer = env->CallObjectMethod(obj, g_create_overlay_layer_method);
+  jlong layer_id = env->CallLongMethod(joverlay_layer, g_flutter_overlay_layer_get_id_method);
+  jobject surface = env->CallObjectMethod(joverlay_layer, g_flutter_overlay_layer_get_surface_method);
+
+  FML_CHECK(CheckException(env));
+  return std::make_unique<AndroidFlutterOverlayLayer>(layer_id, fml::MakeRefCounted<AndroidNativeWindow>(ANativeWindow_fromSurface(env, surface)));
 }
 
 static jmethodID g_attach_to_gl_context_method = nullptr;
@@ -740,11 +752,32 @@ bool RegisterApi(JNIEnv* env) {
     return false;
   }
 
-  g_create_overlay_layer_method =
-      env->GetMethodID(g_flutter_jni_class->obj(), "createOverlayLayer", "()Landroid/view/Surface;");
+  g_on_position_overlay_layer_method =
+      env->GetMethodID(g_flutter_jni_class->obj(), "onPositionOverlayLayer", "(JFFFF)V");
 
-  if (g_create_overlay_layer_method == nullptr) {
-    FML_LOG(ERROR) << "Could not locate createOverlayLayer method";
+  if (g_on_position_overlay_layer_method == nullptr) {
+    FML_LOG(ERROR) << "Could not locate onPositionOverlayLayer method";
+    return false;
+  }
+
+  g_create_overlay_layer_method =
+      env->GetMethodID(g_flutter_jni_class->obj(), "createOverlayLayer", "()Lio/flutter/embedding/engine/FlutterOverlayLayer;");
+
+  jclass flutter_overlay_layer_class = env->FindClass("io/flutter/embedding/engine/FlutterOverlayLayer");
+  if (flutter_overlay_layer_class == nullptr) {
+    FML_LOG(ERROR) << "Could not locate FlutterOverlayLayer class";
+    return false;
+  }
+
+  g_flutter_overlay_layer_get_id_method = env->GetMethodID(flutter_overlay_layer_class, "getId", "()J");
+  if (g_flutter_overlay_layer_get_id_method == nullptr) {
+    FML_LOG(ERROR) << "Could not locate FlutterOverlayLayer#getId method";
+    return false;
+  }
+
+  g_flutter_overlay_layer_get_surface_method = env->GetMethodID(flutter_overlay_layer_class, "getSurface", "()Landroid/view/Surface;");
+  if (g_flutter_overlay_layer_get_surface_method == nullptr) {
+    FML_LOG(ERROR) << "Could not locate FlutterOverlayLayer#getSurface method";
     return false;
   }
 

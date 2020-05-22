@@ -58,6 +58,8 @@ class GPUSurfaceGL : public Surface {
   // external view embedder is present.
   const bool render_to_surface_;
   bool valid_ = false;
+
+  bool debug_ = false;
   fml::WeakPtrFactory<GPUSurfaceGL> weak_factory_;
 
   bool CreateOrUpdateSurfaces(const SkISize& size);

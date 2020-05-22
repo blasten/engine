@@ -56,10 +56,11 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
  
   public FlutterNativeView(@NonNull Context context, @Nullable AttributeSet attrs, @Nullable ImageReader reader) {
     super(context, attrs);
-    init();
     if (reader != null) {
       this.reader = reader;
       this.isOverlay = true;
+    } else {
+      setAlpha(0.0f);
     }
   }
 
@@ -135,38 +136,60 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
   public int numImage = 0;
   @Override
   public void onImageAvailable(ImageReader reader) {
-    numImage++;
     Log.e("flutter", "==============================> IMAGE available " + numImage);
+    numImage++;
+
     // this.invalidate();
   }
 
+  private android.media.Image image;
   ///
   /// 
+  /// 
+  int captured = 0;
   @Nullable private android.hardware.HardwareBuffer hardwareBuffer;
   public void acquireLatestImage() {
     if (reader == null) {
       Log.d("flutter", " (NO READER) ");
       return;
     }
-    android.media.Image image = reader.acquireLatestImage();
+    image = reader.acquireLatestImage();
     if (image == null) {
       Log.d("flutter", " (NO IMAGE) ");
       return;
     }
     hardwareBuffer = image.getHardwareBuffer();
+    bitmap = android.graphics.Bitmap.wrapHardwareBuffer(hardwareBuffer, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB));
+
+    Log.d("flutter", " CAPTURED IMAGE " + captured);
+    captured++;
+    
     image.close();
+    image = null;
+  
     invalidate();
   }
 
   @Override
   protected void onDraw(Canvas canvas) {
     super.onDraw(canvas);
-    if (hardwareBuffer == null) {
+    if (bitmap == null) {
       return;
     }
-    bitmap = android.graphics.Bitmap.wrapHardwareBuffer(hardwareBuffer, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB));
+
+    Log.d("flutter", " onDraw(Canvas canvas) ");
+
+  
     canvas.drawBitmap(bitmap, 0, 0, null);
-    hardwareBuffer = null;
+    bitmap = null;
+
+    if (isOverlay) {
+      android.graphics.Paint paint = new android.graphics.Paint();
+      paint.setStyle(android.graphics.Paint.Style.STROKE);
+      paint.setColor(android.graphics.Color.BLACK);
+      canvas.drawRect(new android.graphics.Rect(0, 0, getWidth()-1, getHeight()-1), paint);
+    }
+
 
     // android.media.Image.Plane[] imagePlanes = image.getPlanes();
     // if (imagePlanes.length != 1) {
@@ -189,12 +212,7 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
     // }
 
     // bitmap.copyPixelsFromBuffer(byteBuffer);
-  }
-
-  private void init() {
-    // Keep this SurfaceView transparent until Flutter has a frame ready to render. This avoids
-    // displaying a black rectangle in our place.
-    setAlpha(0.0f);
+  
   }
 
   @Nullable

@@ -106,12 +106,12 @@ bool AndroidExternalViewEmbedder::SubmitFrame(GrContext* context,
       for (SkRect& joined_rect : intersection_rects) {
         // Get the intersection rect between the current rect
         // and the platform view rect.
-        joined_rect.intersect(platform_view_rect);
+       // joined_rect.intersect(platform_view_rect);
         // Subpixels in the platform may not align with the canvas subpixels.
         // To workaround it, round the floating point bounds and make the rect slighly larger.
         // For example, {0.3, 0.5, 3.1, 4.7} becomes {0, 0, 4, 5}.
-        joined_rect.setLTRB(std::floor(joined_rect.left()), std::floor(joined_rect.top()),
-                            std::ceil(joined_rect.right()), std::ceil(joined_rect.bottom()));
+        // joined_rect.setLTRB(std::floor(joined_rect.left()), std::floor(joined_rect.top()),
+        //                     std::ceil(joined_rect.right()), std::ceil(joined_rect.bottom()));
         // Clip the background canvas, so it doesn't contain any of the pixels drawn
         // on the overlay layer.
         background_canvas->clipRect(joined_rect, SkClipOp::kDifference);
@@ -129,6 +129,24 @@ bool AndroidExternalViewEmbedder::SubmitFrame(GrContext* context,
     }
     background_canvas->drawPicture(picture);
   }
+
+  int64_t view_id = 0;
+  EmbeddedViewParams* params = &current_composition_params_[view_id];
+
+  JNIEnv* env = fml::jni::AttachCurrentThread();
+  fml::jni::ScopedJavaLocalRef<jobject> view = java_object_.get(env);
+
+  FlutterViewOnPositionPlatformView(fml::jni::AttachCurrentThread(), view.obj(), view_id,
+    params->offsetPixels.x(),
+    params->offsetPixels.y(),
+    params->sizePoints.width(),
+    params->sizePoints.height()
+  );
+
+  FML_LOG(ERROR) << "compositing embedded view: " << view_id << ", at: " << params->offsetPixels.x()
+    << ", " << params->offsetPixels.y() << ", "
+    << " (" << params->sizePoints.width() << "x" << params->sizePoints.height() << ")";
+
   composition_order_.clear();
   layer_pool_->RecycleLayers();
   return did_submit;
@@ -143,14 +161,20 @@ std::shared_ptr<platform_view::OverlayLayer> AndroidExternalViewEmbedder::GetLay
   std::shared_ptr<platform_view::OverlayLayer> layer = layer_pool_->GetLayer(gr_context, java_object_);
   std::unique_ptr<SurfaceFrame> frame = layer->surface->AcquireFrame(frame_size_, true);
 
+  JNIEnv* env = fml::jni::AttachCurrentThread();
+  fml::jni::ScopedJavaLocalRef<jobject> view = java_object_.get(env);
 
-  // SkCanvas* overlay_canvas = frame->SkiaCanvas();
-  // overlay_canvas->clear(SK_ColorTRANSPARENT);
-  // // Offset the picture since its absolute position on the scene is determined
-  // // by the position of the overlay view.
-  // overlay_canvas->translate(-rect.x(), -rect.y());
-  // overlay_canvas->drawPicture(picture);
+
+  SkCanvas* overlay_canvas = frame->SkiaCanvas();
+  overlay_canvas->clear(SK_ColorTRANSPARENT);
+  // Offset the picture since its absolute position on the scene is determined
+  // by the position of the overlay view.
+  overlay_canvas->translate(-rect.x(), -rect.y());
+  overlay_canvas->drawPicture(picture);
   layer->did_submit_last_frame = frame->Submit();
+
+  FlutterViewPositionOverlayLayer(fml::jni::AttachCurrentThread(), view.obj(), layer->id, rect.x(), rect.y(), rect.width(), rect.height());
+
   return layer;
 }
 
@@ -189,24 +213,24 @@ void AndroidExternalViewEmbedder::CancelFrame() {
 
 // |ExternalViewEmbedder|
 void AndroidExternalViewEmbedder::FinishFrame() {
-  int64_t view_id = 0;
+  // int64_t view_id = 0;
 
-  EmbeddedViewParams* params = &current_composition_params_[view_id];
+  // EmbeddedViewParams* params = &current_composition_params_[view_id];
 
 
-  JNIEnv* env = fml::jni::AttachCurrentThread();
-  fml::jni::ScopedJavaLocalRef<jobject> view = java_object_.get(env);
+  // JNIEnv* env = fml::jni::AttachCurrentThread();
+  // fml::jni::ScopedJavaLocalRef<jobject> view = java_object_.get(env);
 
-  FlutterViewOnPositionPlatformView(fml::jni::AttachCurrentThread(), view.obj(), view_id,
-    params->offsetPixels.x(),
-    params->offsetPixels.y(),
-    params->sizePoints.width(),
-    params->sizePoints.height()
-  );
+  // FlutterViewOnPositionPlatformView(fml::jni::AttachCurrentThread(), view.obj(), view_id,
+  //   params->offsetPixels.x(),
+  //   params->offsetPixels.y(),
+  //   params->sizePoints.width(),
+  //   params->sizePoints.height()
+  // );
 
-  FML_LOG(ERROR) << "compositing embedded view: " << view_id << ", at: " << params->offsetPixels.x()
-    << ", " << params->offsetPixels.y() << ", "
-    << " (" << params->sizePoints.width() << "x" << params->sizePoints.height() << ")";
+  // FML_LOG(ERROR) << "compositing embedded view: " << view_id << ", at: " << params->offsetPixels.x()
+  //   << ", " << params->offsetPixels.y() << ", "
+  //   << " (" << params->sizePoints.width() << "x" << params->sizePoints.height() << ")";
 
   ClearFrame();
 }

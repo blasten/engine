@@ -26,6 +26,7 @@ import android.view.accessibility.AccessibilityNodeProvider;
 import android.view.autofill.AutofillValue;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
+import android.view.Choreographer;
 import android.widget.FrameLayout;
 import android.media.ImageReader;
 import android.graphics.PixelFormat;
@@ -36,6 +37,7 @@ import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import io.flutter.Log;
 import io.flutter.embedding.engine.FlutterEngine;
+import io.flutter.embedding.engine.FlutterOverlayLayer;
 import io.flutter.embedding.engine.renderer.FlutterRenderer;
 import io.flutter.embedding.engine.renderer.FlutterUiDisplayListener;
 import io.flutter.embedding.engine.renderer.RenderSurface;
@@ -47,6 +49,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Set;
 
@@ -83,7 +87,7 @@ public class FlutterView extends FrameLayout {
   // Internal view hierarchy references.
   @Nullable private View flutterView;
   private final Set<FlutterUiDisplayListener> flutterUiDisplayListeners = new HashSet<>();
-  private final List<FlutterNativeView> overlayLayerViews = new ArrayList<>();
+  private final Map<Long, FlutterNativeView> overlayLayerViews = new HashMap<Long, FlutterNativeView>();
 
   private boolean isFlutterUiDisplayed;
 
@@ -168,7 +172,7 @@ public class FlutterView extends FrameLayout {
     } else if (renderMode == RenderMode.view) {
       FlutterNativeView nativeView = new FlutterNativeView(context);
       flutterView = nativeView;
-      overlayLayerViews.add(nativeView);
+      overlayLayerViews.put(0L, nativeView);
     } else {
       flutterView = new FlutterTextureView(context);
     }
@@ -256,7 +260,7 @@ public class FlutterView extends FrameLayout {
     } else if (renderMode == RenderMode.view) {
       FlutterNativeView nativeView = new FlutterNativeView(context);
       flutterView = nativeView;
-      overlayLayerViews.add(nativeView);
+      overlayLayerViews.put(0L, nativeView);
     } else {
       flutterView = new FlutterTextureView(context);
     }
@@ -294,7 +298,7 @@ public class FlutterView extends FrameLayout {
     super(context, attrs);
 
     this.flutterView = flutterNativeView;
-    overlayLayerViews.add(flutterNativeView);
+    overlayLayerViews.put(0L, flutterNativeView);
 
     init();
   }
@@ -1039,7 +1043,7 @@ public class FlutterView extends FrameLayout {
     void onFlutterEngineDetachedFromFlutterView();
   }
 
-  public Surface createOverlayLayer() {
+  public FlutterOverlayLayer createOverlayLayer() {
     Log.d("flutter", "/////////////////////// ---> Creating image reader of size " + getWidth() + "x" + getHeight());
 
     ImageReader reader = ImageReader.newInstance(
@@ -1050,14 +1054,38 @@ public class FlutterView extends FrameLayout {
       HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE | HardwareBuffer.USAGE_GPU_COLOR_OUTPUT);
 
     FlutterNativeView view = new FlutterNativeView(getContext(), /*attrs=*/ null, /*reader=*/ reader);
-    overlayLayerViews.add(view);
-    return reader.getSurface();
+
+    int nextId = overlayLayerViews.size();
+    overlayLayerViews.put((long)nextId, view);
+    return new FlutterOverlayLayer(nextId, reader.getSurface());
+  }
+
+  private View testView;
+
+  public void positionOverlayLayer(long id, float x, float y, float width, float height) {
+    Log.e("flutter", "positionOverlayLayer(" + id + ", " + x + ", " + y + ", " + width + ", " + height);
+
+    FlutterNativeView view = overlayLayerViews.get(id);
+    if (view.getParent() == null) {
+      // testView = new View(getContext());
+      // testView.setBackgroundColor(android.graphics.Color.BLUE);
+      addView(view);
+    }
+
+    float density = getContext().getResources().getDisplayMetrics().density;
+    android.widget.FrameLayout.LayoutParams layoutParams = new android.widget.FrameLayout.LayoutParams((int) (width * density), (int) (height));
+    layoutParams.leftMargin = (int) x;
+    layoutParams.topMargin = (int) y;
+
+    view.bringToFront();
+    view.setLayoutParams(layoutParams);
+    view.acquireLatestImage();
   }
 
   public void adquireLatestSurfaceImage() {
     Log.d("flutter", "Number of overlays: " + overlayLayerViews.size());
-    for (FlutterNativeView view : overlayLayerViews) {
-      view.acquireLatestImage();
+    for (Map.Entry<Long, FlutterNativeView> entry : overlayLayerViews.entrySet()) {
+      entry.getValue().acquireLatestImage();
     }
   }
 }

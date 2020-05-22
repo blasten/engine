@@ -787,7 +787,7 @@ public class FlutterJNI {
 
   @SuppressWarnings("unused")
   @UiThread
-  private Surface createOverlayLayer() {
+  private FlutterOverlayLayer createOverlayLayer() {
     ensureRunningOnMainThread();
     if (platformViewsController == null) {
       throw new RuntimeException("platformViewsController must be set before attempting to create an overlay layer");
@@ -800,9 +800,19 @@ public class FlutterJNI {
   private void onPositionPlatformView(int viewId, float x, float y, float width, float height) {
     ensureRunningOnMainThread();
     if (platformViewsController == null) {
-      throw new RuntimeException("platformViewsController must be set before attempting to position an overlay layer");
+      throw new RuntimeException("platformViewsController must be set before attempting to position a platform view");
     }
     platformViewsController.onPositionPlatformView(viewId, x, y, width, height);
+  }
+
+  @SuppressWarnings("unused")
+  @UiThread
+  private void onPositionOverlayLayer(long id, float x, float y, float width, float height) {
+    ensureRunningOnMainThread();
+    if (platformViewsController == null) {
+      throw new RuntimeException("platformViewsController must be set before attempting to position an overlay layer");
+    }
+    platformViewsController.onPositionOverlayLayer(id, x, y, width, height);
   }
 
   // ----- End Engine Lifecycle Support ----

@@ -26,18 +26,34 @@ public class VsyncWaiter {
 
   private final FlutterJNI.AsyncWaitForVsyncDelegate asyncWaitForVsyncDelegate =
       new FlutterJNI.AsyncWaitForVsyncDelegate() {
+        private int frame = 0;
         @Override
         public void asyncWaitForVsync(long cookie) {
+          Log.e("flutter", " ============= asyncWaitForVsync ============= ");
+
           Choreographer.getInstance()
               .postFrameCallback(
                   new Choreographer.FrameCallback() {
                     @Override
                     public void doFrame(long frameTimeNanos) {
-                      Log.e("flutter", " ============= doFrame ============= ");
+                      Log.e("flutter", " ============= doFrame "+frame+" ============= ");
                       float fps = windowManager.getDefaultDisplay().getRefreshRate();
                       long refreshPeriodNanos = (long) (1000000000.0 / fps);
                       FlutterJNI.nativeOnVsync(
                           frameTimeNanos, frameTimeNanos + refreshPeriodNanos, cookie);
+                     Log.e("flutter", " =============/ end doFrame  "+frame+" ============= ");
+
+                        Choreographer.getInstance()
+              .postFrameCallback(
+                  new Choreographer.FrameCallback() {
+                    @Override
+                    public void doFrame(long frameTimeNanos) {
+                     Log.e("flutter", " ============= FINISHED FRAME  "+frame+" ============= ");
+                     frame++;
+
+                    }
+                  });
+
                     }
                   });
         }

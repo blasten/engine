@@ -38,7 +38,27 @@ void FlutterViewOnPreEngineRestart(JNIEnv* env, jobject obj);
 
 void FlutterViewOnPositionPlatformView(JNIEnv* env, jobject obj, jint view_id, jfloat x, jfloat y, jfloat width, jfloat height);
 
-fml::RefPtr<AndroidNativeWindow> FlutterViewCreateOverlayLayer(JNIEnv* env, jobject obj);
+class AndroidFlutterOverlayLayer {
+ public:
+  AndroidFlutterOverlayLayer(long id, fml::RefPtr<AndroidNativeWindow> window): 
+      id_(id), window_(std::move(window)) {};
+
+  long GetId() {
+    return id_;
+  }
+
+  fml::RefPtr<AndroidNativeWindow> GetWindow() {
+    return window_;
+  }
+
+ private:
+  long id_;
+  fml::RefPtr<AndroidNativeWindow> window_;
+};
+
+std::unique_ptr<AndroidFlutterOverlayLayer> FlutterViewCreateOverlayLayer(JNIEnv* env, jobject obj);
+
+void FlutterViewPositionOverlayLayer(JNIEnv* env, jobject obj, jlong id, jfloat x, jfloat y, jfloat width, jfloat height);
 
 void SurfaceTextureAttachToGLContext(JNIEnv* env, jobject obj, jint textureId);
 

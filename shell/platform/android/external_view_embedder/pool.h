@@ -12,10 +12,13 @@ namespace flutter {
 namespace platform_view {
 
 struct OverlayLayer {
-  OverlayLayer(std::unique_ptr<AndroidSurface> android_surface,
+  OverlayLayer(long id,
+               std::unique_ptr<AndroidSurface> android_surface,
                std::unique_ptr<Surface> surface);
 
   ~OverlayLayer();
+
+  long id;
 
   std::unique_ptr<AndroidSurface> android_surface;
 

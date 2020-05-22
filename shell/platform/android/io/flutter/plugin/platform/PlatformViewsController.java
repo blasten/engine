@@ -14,11 +14,11 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.Surface;
 import androidx.annotation.NonNull;
 import androidx.annotation.UiThread;
 import androidx.annotation.VisibleForTesting;
 import io.flutter.embedding.android.FlutterView;
+import io.flutter.embedding.engine.FlutterOverlayLayer;
 import io.flutter.embedding.engine.dart.DartExecutor;
 import io.flutter.embedding.engine.systemchannels.PlatformViewsChannel;
 import io.flutter.plugin.editing.TextInputPlugin;
@@ -433,27 +433,6 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
     flushAllViews();
   }
 
-  public void onPositionPlatformView(int viewId, float x, float y, float width, float height) {
-    // new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
-    //   @Override
-    //   public void run() {
-        Log.e("flutter", "onPositionPlatformView(" + viewId + ", " + x + ", " + y + ", " + width + ", " + height);
-        float density = context.getResources().getDisplayMetrics().density;
-        android.widget.FrameLayout.LayoutParams layoutParams = new android.widget.FrameLayout.LayoutParams((int) (width * density), (int) (height * density));
-        layoutParams.leftMargin = (int) x;
-        layoutParams.topMargin = (int) y;
-        webView.setLayoutParams(layoutParams);
-        if (webView.getParent() == null) {
-            ((android.widget.FrameLayout)flutterView).addView(webView);
-        }
-        ((FlutterView)flutterView).adquireLatestSurfaceImage();
-        // if (io.flutter.embedding.android.FlutterNativeView.instance != null) {
-        //   // io.flutter.embedding.android.FlutterNativeView.instance.image = io.flutter.embedding.android.FlutterNativeView.instance.reader.acquireLastestImage();
-        //   io.flutter.embedding.android.FlutterNativeView.instance.acquireLatestImage();
-        // }
-    // }});
-  }
-
   @Override
   public View getPlatformViewById(Integer id) {
     VirtualDisplayController controller = vdControllers.get(id);
@@ -563,10 +542,40 @@ public class PlatformViewsController implements PlatformViewsAccessibilityDelega
     vdControllers.clear();
   }
 
-  public Surface createOverlayLayer() {
+  public void onPositionPlatformView(int viewId, float x, float y, float width, float height) {
+    // new android.os.Handler(android.os.Looper.getMainLooper()).post(new Runnable() {
+    //   @Override
+    //   public void run() {
+        ((FlutterView)flutterView).adquireLatestSurfaceImage();
+          
+        Log.e("flutter", "onPositionPlatformView(" + viewId + ", " + x + ", " + y + ", " + width + ", " + height);
+        float density = context.getResources().getDisplayMetrics().density;
+        android.widget.FrameLayout.LayoutParams layoutParams = new android.widget.FrameLayout.LayoutParams((int) (width * density), (int) (height * density));
+        layoutParams.leftMargin = (int) x;
+        layoutParams.topMargin = (int) y;
+        webView.setLayoutParams(layoutParams);
+        if (webView.getParent() == null) {
+            ((android.widget.FrameLayout)flutterView).addView(webView);
+        }
+
+        // if (io.flutter.embedding.android.FlutterNativeView.instance != null) {
+        //   // io.flutter.embedding.android.FlutterNativeView.instance.image = io.flutter.embedding.android.FlutterNativeView.instance.reader.acquireLastestImage();
+        //   io.flutter.embedding.android.FlutterNativeView.instance.acquireLatestImage();
+        // }
+    // }});
+  }
+
+  public FlutterOverlayLayer createOverlayLayer() {
     if (flutterView == null) {
       throw new RuntimeException("Cannot create an overlay layer without a flutter view");
     }
     return ((FlutterView)flutterView).createOverlayLayer();
+  }
+
+  public void onPositionOverlayLayer(long id, float x, float y, float width, float height) {
+    if (flutterView == null) {
+      throw new RuntimeException("Cannot create an overlay layer without a flutter view");
+    }
+    ((FlutterView)flutterView).positionOverlayLayer(id, x, y, width, height);
   }
 }

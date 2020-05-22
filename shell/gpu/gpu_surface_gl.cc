@@ -230,6 +230,12 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceGL::AcquireFrame(const SkISize& size, bo
     return nullptr;
   }
 
+  if (!delegate_->GLContextMakeCurrent()) {
+    FML_LOG(ERROR)
+        << "Could not make the context current to acquire the frame.";
+    return nullptr;
+  }
+
   // TODO(38466): Refactor GPU surface APIs take into account the fact that an
   // external view embedder may want to render to the root surface.
   if (!render_to_surface_) {
@@ -250,6 +256,8 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceGL::AcquireFrame(const SkISize& size, bo
 
   surface->getCanvas()->setMatrix(root_surface_transformation);
 
+
+  debug_ = debug;
   SurfaceFrame::SubmitCallback submit_callback =
       [weak = weak_factory_.GetTaskRunnerAffineWeakPtr()](
           const SurfaceFrame& surface_frame, SkCanvas* canvas) {
@@ -271,14 +279,27 @@ bool GPUSurfaceGL::PresentSurface(SkCanvas* canvas) {
     return false;
   }
 
+
+  // if (debug_) {
+  //   FML_LOG(ERROR)
+  //       << "=================== FLUSH (GLContextPresent) ============== ";
+  //   return true;
+  // }
+
   {
     TRACE_EVENT0("flutter", "SkCanvas::Flush");
     onscreen_surface_->getCanvas()->flush();
   }
 
+
+
+
+
   if (!delegate_->GLContextPresent()) {
     return false;
   }
+
+
 
   if (delegate_->GLContextFBOResetAfterPresent()) {
     auto current_size =

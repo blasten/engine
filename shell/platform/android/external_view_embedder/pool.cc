@@ -12,9 +12,11 @@ namespace flutter {
 namespace platform_view {
 
 OverlayLayer::OverlayLayer(
+  long id,
   std::unique_ptr<AndroidSurface> android_surface,
   std::unique_ptr<Surface> surface)
-    : android_surface(std::move(android_surface)),
+    : id(id),
+      android_surface(std::move(android_surface)),
       surface(std::move(surface)){};
 
 OverlayLayer::~OverlayLayer() = default;
@@ -26,13 +28,15 @@ std::shared_ptr<OverlayLayer> Pool::GetLayer(GrContext* gr_context, fml::jni::Ja
     JNIEnv* env = fml::jni::AttachCurrentThread();
     fml::jni::ScopedJavaLocalRef<jobject> view = java_object.get(env);
 
-    fml::RefPtr<AndroidNativeWindow> window = FlutterViewCreateOverlayLayer(fml::jni::AttachCurrentThread(), view.obj());
-    FML_DCHECK(android_surface->SetNativeWindow(std::move(window)));
+    std::unique_ptr<AndroidFlutterOverlayLayer> overlay_layer = FlutterViewCreateOverlayLayer(fml::jni::AttachCurrentThread(), view.obj());
+
+    FML_DCHECK(android_surface->SetNativeWindow(overlay_layer->GetWindow()));
 
     std::unique_ptr<Surface> surface = android_surface->CreateGPUSurface(gr_context);
     std::shared_ptr<OverlayLayer> layer = std::make_shared<OverlayLayer>(
-      std::move(android_surface),   //
-      std::move(surface)            //
+      overlay_layer->GetId(),        //
+      std::move(android_surface),    //
+      std::move(surface)             //
     );
     layer->gr_context = gr_context;
     layers_.push_back(layer);
