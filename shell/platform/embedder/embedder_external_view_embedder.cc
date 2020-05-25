@@ -130,7 +130,8 @@ static FlutterBackingStoreConfig MakeBackingStoreConfig(
 
 // |ExternalViewEmbedder|
 bool EmbedderExternalViewEmbedder::SubmitFrame(GrContext* context,
-                                               SkCanvas* background_canvas) {
+                                               SkCanvas* background_canvas,
+                                               std::function<void()> make_context) {
   auto [matched_render_targets, pending_keys] =
       render_target_cache_.GetExistingTargetsInCache(pending_views_);
 

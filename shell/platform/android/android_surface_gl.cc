@@ -43,12 +43,8 @@ AndroidSurfaceGL::AndroidSurfaceGL(fml::jni::JavaObjectWeakGlobalRef java_object
   global_context = offscreen_context_;
  
   if (!offscreen_context_ || !offscreen_context_->IsValid()) {
-    FML_LOG(ERROR) << "(hybrid) offscreen_context_ is NULL";
     offscreen_context_ = nullptr;
   }
-
-  FML_LOG(ERROR) << "(hybrid) CREATED AndroidSurfaceGL";
-
   external_view_embedder_ = std::make_unique<AndroidExternalViewEmbedder>(java_object);
 }
 
@@ -74,9 +70,9 @@ bool AndroidSurfaceGL::IsValid() const {
 }
 
 std::unique_ptr<Surface> AndroidSurfaceGL::CreateGPUSurface(GrContext* gr_context) {
-  // if (gr_context) {
-  //   return std::make_unique<GPUSurfaceGL>(sk_ref_sp(gr_context), this, true);
-  // }
+  if (gr_context) {
+    return std::make_unique<GPUSurfaceGL>(sk_ref_sp(gr_context), this, true);
+  }
   return std::make_unique<GPUSurfaceGL>(this, true);
 }
 

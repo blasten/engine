@@ -273,33 +273,14 @@ bool GPUSurfaceGL::PresentSurface(SkCanvas* canvas) {
     return false;
   }
 
-  if (!delegate_->GLContextMakeCurrent()) {
-    FML_LOG(ERROR)
-        << "Could not make the context current to acquire the frame.";
-    return false;
-  }
-
-
-  // if (debug_) {
-  //   FML_LOG(ERROR)
-  //       << "=================== FLUSH (GLContextPresent) ============== ";
-  //   return true;
-  // }
-
   {
     TRACE_EVENT0("flutter", "SkCanvas::Flush");
     onscreen_surface_->getCanvas()->flush();
   }
 
-
-
-
-
   if (!delegate_->GLContextPresent()) {
     return false;
   }
-
-
 
   if (delegate_->GLContextFBOResetAfterPresent()) {
     auto current_size =

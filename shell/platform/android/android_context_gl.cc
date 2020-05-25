@@ -168,7 +168,6 @@ AndroidContextGL::AndroidContextGL(fml::RefPtr<AndroidEnvironmentGL> env,
   }
 
   // Create a context for the configuration.
-
   std::tie(success, context_) = CreateContext(
       environment_->Display(), config_,
       share_context != nullptr ? share_context->context_ : EGL_NO_CONTEXT);

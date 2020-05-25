@@ -7,7 +7,8 @@
 namespace flutter {
 
 bool ExternalViewEmbedder::SubmitFrame(GrContext* context,
-                                       SkCanvas* background_canvas) {
+                                       SkCanvas* background_canvas,
+                                       std::function<void()> make_context) {
   return false;
 };
 

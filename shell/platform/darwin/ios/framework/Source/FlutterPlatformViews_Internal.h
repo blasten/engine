@@ -162,8 +162,8 @@ class FlutterPlatformViewsController {
   void Reset();
 
   bool SubmitFrame(GrContext* gr_context,
-                   std::shared_ptr<IOSContext> ios_context,
-                   SkCanvas* background_canvas);
+                   SkCanvas* background_canvas,
+                   std::function<void()> make_context);
 
   // Invoked at the very end of a frame.
   // After invoking this method, nothing should happen on the current TaskRunner during the same

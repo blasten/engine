@@ -34,7 +34,8 @@ SkCanvas* ShellTestExternalViewEmbedder::CompositeEmbeddedView(int view_id) {
 
 // |ExternalViewEmbedder|
 bool ShellTestExternalViewEmbedder::SubmitFrame(GrContext* context,
-                                                SkCanvas* background_canvas) {
+                                                SkCanvas* background_canvas,
+                                                std::function<void()> make_context) {
   return true;
 }
 

@@ -470,8 +470,8 @@ SkRect FlutterPlatformViewsController::GetPlatformViewRect(int view_id) {
 }
 
 bool FlutterPlatformViewsController::SubmitFrame(GrContext* gr_context,
-                                                 std::shared_ptr<IOSContext> ios_context,
-                                                 SkCanvas* background_canvas) {
+                                                 SkCanvas* background_canvas,
+                                                 std::function<void()> make_context) {
   if (merge_threads_) {
     // Threads are about to be merged, we drop everything from this frame
     // and possibly resubmit the same layer tree in the next frame.

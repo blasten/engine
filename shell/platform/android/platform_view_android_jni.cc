@@ -130,6 +130,18 @@ void FlutterViewPositionOverlayLayer(JNIEnv* env, jobject obj, jlong id, jfloat 
   FML_CHECK(CheckException(env));
 }
 
+static jmethodID g_on_begin_frame_method = nullptr;
+void FlutterViewBeginFrame(JNIEnv* env, jobject obj) {
+  env->CallVoidMethod(obj, g_on_begin_frame_method);
+  FML_CHECK(CheckException(env));
+}
+
+static jmethodID g_on_end_frame_method = nullptr;
+void FlutterViewEndFrame(JNIEnv* env, jobject obj) {
+  env->CallVoidMethod(obj, g_on_end_frame_method);
+  FML_CHECK(CheckException(env));
+}
+
 static jmethodID g_create_overlay_layer_method = nullptr;
 static jmethodID g_flutter_overlay_layer_get_id_method  = nullptr;
 static jmethodID g_flutter_overlay_layer_get_surface_method  = nullptr;
@@ -757,6 +769,22 @@ bool RegisterApi(JNIEnv* env) {
 
   if (g_on_position_overlay_layer_method == nullptr) {
     FML_LOG(ERROR) << "Could not locate onPositionOverlayLayer method";
+    return false;
+  }
+
+  g_on_begin_frame_method =
+      env->GetMethodID(g_flutter_jni_class->obj(), "onBeginFrame", "()V");
+
+  if (g_on_begin_frame_method == nullptr) {
+    FML_LOG(ERROR) << "Could not locate onBeginFrame method";
+    return false;
+  }
+
+  g_on_end_frame_method =
+      env->GetMethodID(g_flutter_jni_class->obj(), "onEndFrame", "()V");
+
+  if (g_on_end_frame_method == nullptr) {
+    FML_LOG(ERROR) << "Could not locate onEndFrame method";
     return false;
   }
 

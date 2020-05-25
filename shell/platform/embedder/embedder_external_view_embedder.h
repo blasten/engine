@@ -89,7 +89,9 @@ class EmbedderExternalViewEmbedder final : public ExternalViewEmbedder {
   SkCanvas* CompositeEmbeddedView(int view_id) override;
 
   // |ExternalViewEmbedder|
-  bool SubmitFrame(GrContext* context, SkCanvas* background_canvas) override;
+  bool SubmitFrame(GrContext* context,
+                   SkCanvas* background_canvas,
+                   std::function<void()> make_context) override;
 
   // |ExternalViewEmbedder|
   void FinishFrame() override;

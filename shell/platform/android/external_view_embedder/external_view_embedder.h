@@ -30,7 +30,7 @@ class AndroidExternalViewEmbedder : public ExternalViewEmbedder {
   std::vector<SkCanvas*> GetCurrentCanvases() override;
 
   // |ExternalViewEmbedder|
-  bool SubmitFrame(GrContext* context, SkCanvas* background_canvas) override;
+  bool SubmitFrame(GrContext* context, SkCanvas* background_canvas, std::function<void()> make_context) override;
 
   // |ExternalViewEmbedder|
   PostPrerollResult PostPrerollAction(
@@ -59,6 +59,8 @@ class AndroidExternalViewEmbedder : public ExternalViewEmbedder {
   
   // The size of the background canvas.
   SkISize frame_size_;
+
+  double device_pixel_ratio_;
 
   // The order of composition. Each entry contains a unique id for the platform
   // view.

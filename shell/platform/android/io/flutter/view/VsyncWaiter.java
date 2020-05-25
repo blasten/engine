@@ -30,6 +30,7 @@ public class VsyncWaiter {
         @Override
         public void asyncWaitForVsync(long cookie) {
           Log.e("flutter", " ============= asyncWaitForVsync ============= ");
+          // io.flutter.embedding.android.FlutterView.globalView.adquireLatestSurfaceImage();
 
           Choreographer.getInstance()
               .postFrameCallback(

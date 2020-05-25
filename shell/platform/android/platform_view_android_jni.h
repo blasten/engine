@@ -60,6 +60,10 @@ std::unique_ptr<AndroidFlutterOverlayLayer> FlutterViewCreateOverlayLayer(JNIEnv
 
 void FlutterViewPositionOverlayLayer(JNIEnv* env, jobject obj, jlong id, jfloat x, jfloat y, jfloat width, jfloat height);
 
+void FlutterViewBeginFrame(JNIEnv* env, jobject obj);
+
+void FlutterViewEndFrame(JNIEnv* env, jobject obj);
+
 void SurfaceTextureAttachToGLContext(JNIEnv* env, jobject obj, jint textureId);
 
 void SurfaceTextureUpdateTexImage(JNIEnv* env, jobject obj);
