@@ -21,9 +21,9 @@ OverlayLayer::OverlayLayer(
 
 OverlayLayer::~OverlayLayer() = default;
 
-std::shared_ptr<OverlayLayer> Pool::GetLayer(GrContext* gr_context, fml::jni::JavaObjectWeakGlobalRef java_object) {
+std::shared_ptr<OverlayLayer> Pool::GetLayer(GrContext* gr_context, std::shared_ptr<AndroidContextGL> android_context, fml::jni::JavaObjectWeakGlobalRef java_object) {
   if (available_layer_index_ >= layers_.size()) {
-    std::unique_ptr<AndroidSurface> android_surface = AndroidSurface::Create(false, java_object);
+    std::unique_ptr<AndroidSurface> android_surface = AndroidSurface::Create(false, android_context, java_object);
 
     JNIEnv* env = fml::jni::AttachCurrentThread();
     fml::jni::ScopedJavaLocalRef<jobject> view = java_object.get(env);

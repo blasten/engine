@@ -24,8 +24,13 @@ PlatformViewAndroid::PlatformViewAndroid(
     fml::jni::JavaObjectWeakGlobalRef java_object,
     bool use_software_rendering)
     : PlatformView(delegate, std::move(task_runners)),
-      java_object_(java_object),
-      android_surface_(AndroidSurface::Create(use_software_rendering, java_object)) {
+      java_object_(java_object) {
+
+  auto environment = fml::MakeRefCounted<AndroidEnvironmentGL>();
+  FML_CHECK(environment) << "Could not create an Android GL environment.";
+
+  auto android_context = std::make_shared<AndroidContextGL>(environment);
+  android_surface_ = AndroidSurface::Create(use_software_rendering, android_context, java_object);
   FML_CHECK(android_surface_)
       << "Could not create an OpenGL, Vulkan or Software surface to setup "
          "rendering.";

@@ -39,7 +39,7 @@ bool GetSkColorType(int32_t buffer_format,
 AndroidSurfaceSoftware::AndroidSurfaceSoftware(fml::jni::JavaObjectWeakGlobalRef java_object) {
   GetSkColorType(WINDOW_FORMAT_RGBA_8888, &target_color_type_,
                  &target_alpha_type_);
-  external_view_embedder_ = std::make_unique<AndroidExternalViewEmbedder>(java_object);
+  external_view_embedder_ = std::make_unique<AndroidExternalViewEmbedder>(nullptr, java_object);
 }
 
 AndroidSurfaceSoftware::~AndroidSurfaceSoftware() = default;
@@ -143,7 +143,7 @@ ExternalViewEmbedder* AndroidSurfaceSoftware::GetExternalViewEmbedder() {
 
 void AndroidSurfaceSoftware::TeardownOnScreenContext() {}
 
-bool AndroidSurfaceSoftware::OnScreenSurfaceResize(const SkISize& size) const {
+bool AndroidSurfaceSoftware::OnScreenSurfaceResize(const SkISize& size) {
   return true;
 }
 

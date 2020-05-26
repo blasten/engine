@@ -33,7 +33,7 @@ class AndroidSurfaceVulkan : public AndroidSurface,
   void TeardownOnScreenContext() override;
 
   // |AndroidSurface|
-  bool OnScreenSurfaceResize(const SkISize& size) const override;
+  bool OnScreenSurfaceResize(const SkISize& size) override;
 
   // |AndroidSurface|
   bool ResourceContextMakeCurrent() override;

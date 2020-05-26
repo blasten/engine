@@ -9,58 +9,12 @@
 
 namespace flutter {
 
-// #define GPU_GL_RGBA8 0x8058
-// #define GPU_GL_RGBA4 0x8056
-// #define GPU_GL_RGB565 0x8D62
-
-// static SkColorType FirstSupportedColorType(GrContext* context,
-//                                            GrGLenum* format) {
-// #define RETURN_IF_RENDERABLE(x, y)                 \
-//   if (context->colorTypeSupportedAsSurface((x))) { \
-//     *format = (y);                                 \
-//     return (x);                                    \
-//   }
-//   RETURN_IF_RENDERABLE(kRGBA_8888_SkColorType, GPU_GL_RGBA8);
-//   RETURN_IF_RENDERABLE(kARGB_4444_SkColorType, GPU_GL_RGBA4);
-//   RETURN_IF_RENDERABLE(kRGB_565_SkColorType, GPU_GL_RGB565);
-//   return kUnknown_SkColorType;
-// }
-
-// static sk_sp<SkSurface> WrapOnscreenSurface(GrContext* context,
-//                                             const SkISize& size,
-//                                             intptr_t fbo) {
-//   GrGLenum format;
-//   const SkColorType color_type = FirstSupportedColorType(context, &format);
-
-//   GrGLFramebufferInfo framebuffer_info = {};
-//   // framebuffer_info.fFBOID = static_cast<GrGLuint>(fbo);
-//   framebuffer_info.fFormat = format;
-
-//   GrBackendRenderTarget render_target(size.width(),     // width
-//                                       size.height(),    // height
-//                                       0,                // sample count
-//                                       0,                // stencil bits (TODO)
-//                                       framebuffer_info  // framebuffer info
-//   );
-
-//   sk_sp<SkColorSpace> colorspace = SkColorSpace::MakeSRGB();
-
-//   SkSurfaceProps surface_props(
-//       SkSurfaceProps::InitType::kLegacyFontHost_InitType);
-
-//   return SkSurface::MakeFromBackendRenderTarget(
-//       context,                                       // gr context
-//       render_target,                                 // render target
-//       GrSurfaceOrigin::kBottomLeft_GrSurfaceOrigin,  // origin
-//       color_type,                                    // color type
-//       colorspace,                                    // colorspace
-//       &surface_props                                 // surface properties
-//   );
-// }
-
-AndroidExternalViewEmbedder::AndroidExternalViewEmbedder(fml::jni::JavaObjectWeakGlobalRef java_object) 
-  : layer_pool_(std::make_unique<platform_view::Pool>()),
-    java_object_(java_object) {}
+AndroidExternalViewEmbedder::AndroidExternalViewEmbedder(
+    std::shared_ptr<AndroidContextGL> android_context,
+    fml::jni::JavaObjectWeakGlobalRef java_object)
+      : android_context_(android_context),
+        layer_pool_(std::make_unique<platform_view::Pool>()),
+        java_object_(java_object) {}
 
 // |ExternalViewEmbedder|
 void AndroidExternalViewEmbedder::PrerollCompositeEmbeddedView(
@@ -123,22 +77,22 @@ bool AndroidExternalViewEmbedder::SubmitFrame(GrContext* context,
   TRACE_EVENT0("flutter", "AndroidExternalViewEmbedder::SubmitFrame");
 
   // Resolve all pending GPU operations before allocating a new surface.
-  //background_canvas->flush();
+  // background_canvas->flush();
 
   SkAutoCanvasRestore save(background_canvas, /*doSave=*/true);
 
-  platform_view::CompositeOrderMap overlay_layers;
+  std::map<int64_t, std::list<SkRect>> overlay_layers;
+  std::map<int64_t, sk_sp<SkPicture>> pictures;
 
   JNIEnv* env = fml::jni::AttachCurrentThread();
   fml::jni::ScopedJavaLocalRef<jobject> view = java_object_.get(env);
 
-  auto did_submit = true;
   auto num_platform_views = composition_order_.size();
 
   for (size_t i = 0; i < num_platform_views; i++) {
     int64_t platform_view_id = composition_order_[i];
     sk_sp<RTree> rtree = platform_view_rtrees_[platform_view_id];
-    sk_sp<SkPicture> picture = picture_recorders_[platform_view_id]->finishRecordingAsPicture();
+    pictures[platform_view_id] = picture_recorders_[platform_view_id]->finishRecordingAsPicture();
 
     // Position the platform view in the embedding.
     FlutterViewOnPositionPlatformView(
@@ -158,8 +112,6 @@ bool AndroidExternalViewEmbedder::SubmitFrame(GrContext* context,
       std::list<SkRect> intersection_rects =
           rtree->searchNonOverlappingDrawnRects(platform_view_rect);
       auto allocation_size = intersection_rects.size();
-      auto overlay_id = overlay_layers[current_platform_view_id].size();
-
       if (allocation_size > kMaxLayerAllocations) {
         SkRect joined_rect;
         for (const SkRect& rect : intersection_rects) {
@@ -173,7 +125,7 @@ bool AndroidExternalViewEmbedder::SubmitFrame(GrContext* context,
       for (SkRect& joined_rect : intersection_rects) {
         // Get the intersection rect between the current rect
         // and the platform view rect.
-       // joined_rect.intersect(platform_view_rect);
+        // joined_rect.intersect(platform_view_rect);
         // Subpixels in the platform may not align with the canvas subpixels.
         // To workaround it, round the floating point bounds and make the rect slighly larger.
         // For example, {0.3, 0.5, 3.1, 4.7} becomes {0, 0, 4, 5}.
@@ -182,56 +134,49 @@ bool AndroidExternalViewEmbedder::SubmitFrame(GrContext* context,
         // Clip the background canvas, so it doesn't contain any of the pixels drawn
         // on the overlay layer.
         background_canvas->clipRect(joined_rect, SkClipOp::kDifference);
-        // Get a new host layer.
-        std::shared_ptr<platform_view::OverlayLayer> layer = GetLayer(context,                   //
-                                                                      picture,                   //
-                                                                      joined_rect,               //
-                                                                      current_platform_view_id,  //
-                                                                      overlay_id                 //
-        );
-        // make_context();
-        did_submit &= layer->did_submit_last_frame;
-        overlay_layers[current_platform_view_id].push_back(layer);
-        overlay_id++;
       }
+      overlay_layers[current_platform_view_id] = intersection_rects;
     }
-    background_canvas->drawPicture(picture);
+    background_canvas->drawPicture(pictures[platform_view_id]);
+  }
+
+  // Submit background canvas frame.
+  make_context();
+
+  bool did_submit = true;
+  for (size_t i = 0; i < num_platform_views; i++) {
+    int64_t platform_view_id = composition_order_[i];
+    int overlay_id = 0;
+    for (SkRect& overlay_rect : overlay_layers[platform_view_id]) {
+      did_submit &= BuildAndSubmitOverlay(context,                      //
+                                          pictures[platform_view_id],   //
+                                          overlay_rect,                 //
+                                          platform_view_id,             //
+                                          overlay_id                    //
+      );
+      overlay_id++;
+    }
   }
 
   composition_order_.clear();
   layer_pool_->RecycleLayers();
+
   return did_submit;
 }
 
-std::shared_ptr<platform_view::OverlayLayer> AndroidExternalViewEmbedder::GetLayer(
+bool AndroidExternalViewEmbedder::BuildAndSubmitOverlay(
     GrContext* gr_context,
     sk_sp<SkPicture> picture,
     SkRect rect,
     int64_t view_id,
     int64_t overlay_id) {
 
-  std::shared_ptr<platform_view::OverlayLayer> layer = layer_pool_->GetLayer(gr_context, java_object_);
+  std::shared_ptr<platform_view::OverlayLayer> layer =
+      layer_pool_->GetLayer(gr_context, android_context_, java_object_);
   std::unique_ptr<SurfaceFrame> frame = layer->surface->AcquireFrame(frame_size_, true);
-
-
-  // sk_sp<SkSurface> surface = WrapOnscreenSurface(gr_context, frame_size_, 0);
-  // SkCanvas* overlay_canvas = surface->getCanvas();
-
-
-  // // SkCanvas* overlay_canvas = frame->SkiaCanvas();
-  // overlay_canvas->clear(SK_ColorTRANSPARENT);
-  // // Offset the picture since its absolute position on the scene is determined
-  // // by the position of the overlay view.
-  // overlay_canvas->flush();
-
-
-
 
   JNIEnv* env = fml::jni::AttachCurrentThread();
   fml::jni::ScopedJavaLocalRef<jobject> view = java_object_.get(env);
-
-
-
 
   // Position the overlay.
   FlutterViewPositionOverlayLayer(
@@ -244,18 +189,13 @@ std::shared_ptr<platform_view::OverlayLayer> AndroidExternalViewEmbedder::GetLay
     rect.height()                       //
   );
 
-
-  // SkCanvas* overlay_canvas = frame->getCanvas();
-
-
   SkCanvas* overlay_canvas = frame->SkiaCanvas();
   overlay_canvas->clear(SK_ColorTRANSPARENT);
   // Offset the picture since its absolute position on the scene is determined
   // by the position of the overlay view.
   overlay_canvas->translate(-rect.x(), -rect.y());
   overlay_canvas->drawPicture(picture);
-  layer->did_submit_last_frame = frame->Submit();
-  return layer;
+  return frame->Submit();
 }
 
 // |ExternalViewEmbedder|

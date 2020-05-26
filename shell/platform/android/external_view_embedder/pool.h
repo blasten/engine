@@ -33,8 +33,6 @@ struct OverlayLayer {
   GrContext* gr_context;
 };
 
-using CompositeOrderMap = std::map<int64_t, std::vector<std::shared_ptr<OverlayLayer>>>;
-
 // This class isn't thread safe.
 class Pool {
  public:
@@ -43,7 +41,7 @@ class Pool {
 
   // Gets a layer from the pool if available, or allocates a new one.
   // Finally, it marks the layer as used. That is, it increments `available_layer_index_`.
-  std::shared_ptr<OverlayLayer> GetLayer(GrContext* gr_context, fml::jni::JavaObjectWeakGlobalRef java_object);
+  std::shared_ptr<OverlayLayer> GetLayer(GrContext* gr_context, std::shared_ptr<AndroidContextGL> android_context, fml::jni::JavaObjectWeakGlobalRef java_object);
 
   // Gets the layers in the pool that aren't currently used.
   // This method doesn't mark the layers as unused.

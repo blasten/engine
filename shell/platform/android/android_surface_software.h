@@ -37,7 +37,7 @@ class AndroidSurfaceSoftware final : public AndroidSurface,
   void TeardownOnScreenContext() override;
 
   // |AndroidSurface|
-  bool OnScreenSurfaceResize(const SkISize& size) const override;
+  bool OnScreenSurfaceResize(const SkISize& size) override;
 
   // |AndroidSurface|
   bool SetNativeWindow(fml::RefPtr<AndroidNativeWindow> window) override;

@@ -16,7 +16,7 @@ namespace flutter {
 
 class AndroidExternalViewEmbedder : public ExternalViewEmbedder {
  public:
-  AndroidExternalViewEmbedder(fml::jni::JavaObjectWeakGlobalRef java_object);
+  AndroidExternalViewEmbedder(std::shared_ptr<AndroidContextGL> android_context, fml::jni::JavaObjectWeakGlobalRef java_object);
 
   // |ExternalViewEmbedder|
   void PrerollCompositeEmbeddedView(
@@ -56,6 +56,8 @@ class AndroidExternalViewEmbedder : public ExternalViewEmbedder {
 
  private:
   static const size_t kMaxLayerAllocations = 2;
+
+  std::shared_ptr<AndroidContextGL> android_context_;
   
   // The size of the background canvas.
   SkISize frame_size_;
@@ -83,11 +85,11 @@ class AndroidExternalViewEmbedder : public ExternalViewEmbedder {
   /// Resets the state.
   void ClearFrame();
 
-  std::shared_ptr<platform_view::OverlayLayer> GetLayer(GrContext* gr_context,
-                                                        sk_sp<SkPicture> picture,
-                                                        SkRect rect,
-                                                        int64_t view_id,
-                                                        int64_t overlay_id);
+  bool BuildAndSubmitOverlay(GrContext* gr_context,
+                             sk_sp<SkPicture> picture,
+                             SkRect rect,
+                             int64_t view_id,
+                             int64_t overlay_id);
 
   SkRect GetPlatformViewRect(int view_id);
 };

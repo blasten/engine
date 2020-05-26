@@ -344,6 +344,8 @@ RasterStatus Rasterizer::DrawToSurface(flutter::LayerTree& layer_tree) {
 
   auto frame = surface_->AcquireFrame(layer_tree.frame_size());
 
+  SurfaceFrame* frame2 = frame.get();
+
   if (frame == nullptr) {
     return RasterStatus::kFailed;
   }
@@ -390,8 +392,8 @@ RasterStatus Rasterizer::DrawToSurface(flutter::LayerTree& layer_tree) {
     if (external_view_embedder != nullptr) {
       external_view_embedder->SubmitFrame(surface_->GetContext(),
                                           root_surface_canvas,
-                                          [this]() {
-                                            surface_->MakeRenderContextCurrent();
+                                          [frame2]() {
+                                            frame2->Submit();
                                           });
       // The external view embedder may mutate the root surface canvas while
       // submitting the frame.

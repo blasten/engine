@@ -14,7 +14,7 @@ namespace flutter {
 
 AndroidSurfaceVulkan::AndroidSurfaceVulkan(fml::jni::JavaObjectWeakGlobalRef java_object)
     : proc_table_(fml::MakeRefCounted<vulkan::VulkanProcTable>()) {
-  external_view_embedder_ = std::make_unique<AndroidExternalViewEmbedder>(java_object);
+  external_view_embedder_ = std::make_unique<AndroidExternalViewEmbedder>(nullptr, java_object);
 }
 
 AndroidSurfaceVulkan::~AndroidSurfaceVulkan() = default;
@@ -54,7 +54,7 @@ std::unique_ptr<Surface> AndroidSurfaceVulkan::CreateGPUSurface(GrContext* gr_co
   return gpu_surface;
 }
 
-bool AndroidSurfaceVulkan::OnScreenSurfaceResize(const SkISize& size) const {
+bool AndroidSurfaceVulkan::OnScreenSurfaceResize(const SkISize& size) {
   return true;
 }
 

@@ -200,7 +200,6 @@ bool GPUSurfaceGL::CreateOrUpdateSurfaces(const SkISize& size) {
   }
 
   sk_sp<SkSurface> onscreen_surface;
-
   onscreen_surface =
       WrapOnscreenSurface(context_.get(),            // GL context
                           size,                      // root surface size
@@ -273,6 +272,13 @@ bool GPUSurfaceGL::PresentSurface(SkCanvas* canvas) {
     return false;
   }
 
+
+  // if (!delegate_->GLContextMakeCurrent()) {
+  //   FML_LOG(ERROR)
+  //       << "Could not make the context current to acquire the frame.";
+  //   return false;
+  // }
+
   {
     TRACE_EVENT0("flutter", "SkCanvas::Flush");
     onscreen_surface_->getCanvas()->flush();
@@ -300,9 +306,6 @@ bool GPUSurfaceGL::PresentSurface(SkCanvas* canvas) {
 
     onscreen_surface_ = std::move(new_onscreen_surface);
   }
-
-  FML_LOG(ERROR)
-        << "GPUSurfaceGL::PresentSurface(SkCanvas* canvas) = clear context";
 
   delegate_->GLContextClearCurrent();
 

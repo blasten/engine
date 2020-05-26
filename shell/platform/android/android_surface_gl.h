@@ -20,11 +20,9 @@ namespace flutter {
 class AndroidSurfaceGL final : public GPUSurfaceGLDelegate,
                                public AndroidSurface {
  public:
-  AndroidSurfaceGL(fml::jni::JavaObjectWeakGlobalRef java_object);
+  AndroidSurfaceGL(std::shared_ptr<AndroidContextGL> android_context, fml::jni::JavaObjectWeakGlobalRef java_object);
 
   ~AndroidSurfaceGL() override;
-
-  bool IsOffscreenContextValid() const;
 
   // |AndroidSurface|
   bool IsValid() const override;
@@ -36,7 +34,7 @@ class AndroidSurfaceGL final : public GPUSurfaceGLDelegate,
   void TeardownOnScreenContext() override;
 
   // |AndroidSurface|
-  bool OnScreenSurfaceResize(const SkISize& size) const override;
+  bool OnScreenSurfaceResize(const SkISize& size) override;
 
   // |AndroidSurface|
   bool ResourceContextMakeCurrent() override;
@@ -63,9 +61,13 @@ class AndroidSurfaceGL final : public GPUSurfaceGLDelegate,
   ExternalViewEmbedder* GetExternalViewEmbedder() override;
 
  private:
-  fml::RefPtr<AndroidContextGL> onscreen_context_;
-  fml::RefPtr<AndroidContextGL> offscreen_context_;
+  fml::RefPtr<AndroidNativeWindow> window_;
+
+  std::shared_ptr<AndroidContextGL> android_context_;
   std::unique_ptr<AndroidExternalViewEmbedder> external_view_embedder_;
+  // fml::RefPtr<AndroidNativeWindow> window_;
+  EGLSurface onscreen_surface_;
+  EGLSurface offscreen_surface_;
 
   FML_DISALLOW_COPY_AND_ASSIGN(AndroidSurfaceGL);
 };
