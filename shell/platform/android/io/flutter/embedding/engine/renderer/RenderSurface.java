@@ -53,4 +53,11 @@ public interface RenderSurface {
    * connected {@code FlutterRenderer}.
    */
   void detachFromRenderer();
+
+  /**
+   * Acquires the latest image from the {@code Surface}.
+   *
+   * Only applicable in synchronized hybrid composition.
+   */
+  void acquireLatestImage();
 }

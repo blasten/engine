@@ -121,8 +121,8 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
       getWidth(),
       getHeight(),
       PixelFormat.RGBA_8888,
-      2,
-      android.hardware.HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE | android.hardware.HardwareBuffer.USAGE_GPU_COLOR_OUTPUT);
+      2);
+    // android.hardware.HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE | android.hardware.HardwareBuffer.USAGE_GPU_COLOR_OUTPUT
 
     reader.setOnImageAvailableListener(this, null);
 
@@ -148,6 +148,8 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
   /// 
   int captured = 0;
   @Nullable private android.hardware.HardwareBuffer hardwareBuffer;
+
+  @Override
   public void acquireLatestImage() {
     if (reader == null) {
       Log.d("flutter", " (NO READER) ");
@@ -158,11 +160,26 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
       Log.d("flutter", " (NO IMAGE) ");
       return;
     }
-    hardwareBuffer = image.getHardwareBuffer();
-    bitmap = android.graphics.Bitmap.wrapHardwareBuffer(hardwareBuffer, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB));
+    // hardwareBuffer = image.getHardwareBuffer();
+    // bitmap = android.graphics.Bitmap.wrapHardwareBuffer(hardwareBuffer, android.graphics.ColorSpace.get(android.graphics.ColorSpace.Named.SRGB));
 
     Log.d("flutter", " CAPTURED IMAGE " + captured);
     captured++;
+
+    android.media.Image.Plane[] imagePlanes = image.getPlanes();
+    android.media.Image.Plane imagePlane = imagePlanes[0];
+    java.nio.ByteBuffer byteBuffer = imagePlane.getBuffer();
+
+    int desiredWidth = imagePlane.getRowStride() / imagePlane.getPixelStride();
+    int desiredHeight = image.getHeight();
+
+    bitmap = android.graphics.Bitmap.createBitmap(
+      desiredWidth,
+      desiredHeight,
+      android.graphics.Bitmap.Config.ARGB_8888
+    );
+
+    bitmap.copyPixelsFromBuffer(byteBuffer);
     
     image.close();
     image = null;
@@ -191,7 +208,6 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
     }
 
 
-    // android.media.Image.Plane[] imagePlanes = image.getPlanes();
     // if (imagePlanes.length != 1) {
     //   Log.e("flutter", "==============================> PLANES.LENGTH != 1 ");
     //   return;
@@ -212,7 +228,6 @@ public class FlutterNativeView extends View implements RenderSurface, ImageReade
     // }
 
     // bitmap.copyPixelsFromBuffer(byteBuffer);
-  
   }
 
   @Nullable

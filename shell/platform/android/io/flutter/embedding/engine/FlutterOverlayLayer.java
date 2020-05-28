@@ -5,7 +5,9 @@
 package io.flutter.embedding.engine;
 
 import android.view.Surface;
+import androidx.annotation.Keep;
 
+@Keep
 final public class FlutterOverlayLayer {
   final private Surface surface;
   final private long id;
@@ -15,10 +17,12 @@ final public class FlutterOverlayLayer {
     this.surface = surface;
   }
 
+  @Keep
   public long getId() {
     return id;
   }
 
+  @Keep
   public Surface getSurface() {
     return surface;
   }

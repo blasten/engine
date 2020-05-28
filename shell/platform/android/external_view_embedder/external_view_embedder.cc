@@ -101,8 +101,8 @@ bool AndroidExternalViewEmbedder::SubmitFrame(GrContext* context,
       platform_view_id,
       current_composition_params_[platform_view_id].offsetPixels.x(),
       current_composition_params_[platform_view_id].offsetPixels.y(),
-      current_composition_params_[platform_view_id].sizePoints.width(),
-      current_composition_params_[platform_view_id].sizePoints.height()
+      current_composition_params_[platform_view_id].sizePoints.width() * device_pixel_ratio_,
+      current_composition_params_[platform_view_id].sizePoints.height() * device_pixel_ratio_
     );
 
     for (size_t j = i + 1; j > 0; j--) {
@@ -129,8 +129,11 @@ bool AndroidExternalViewEmbedder::SubmitFrame(GrContext* context,
         // Subpixels in the platform may not align with the canvas subpixels.
         // To workaround it, round the floating point bounds and make the rect slighly larger.
         // For example, {0.3, 0.5, 3.1, 4.7} becomes {0, 0, 4, 5}.
-        joined_rect.setLTRB(std::floor(joined_rect.left()), std::floor(joined_rect.top()),
-                            std::ceil(joined_rect.right()), std::ceil(joined_rect.bottom()));
+        joined_rect.setLTRB(std::floor(joined_rect.left()),   //
+                            std::floor(joined_rect.top()),    //
+                            std::ceil(joined_rect.right()),   //
+                            std::ceil(joined_rect.bottom())   //
+        );
         // Clip the background canvas, so it doesn't contain any of the pixels drawn
         // on the overlay layer.
         background_canvas->clipRect(joined_rect, SkClipOp::kDifference);
@@ -194,6 +197,7 @@ bool AndroidExternalViewEmbedder::BuildAndSubmitOverlay(
   // Offset the picture since its absolute position on the scene is determined
   // by the position of the overlay view.
   overlay_canvas->translate(-rect.x(), -rect.y());
+
   overlay_canvas->drawPicture(picture);
   return frame->Submit();
 }

@@ -101,7 +101,7 @@ public class FlutterSurfaceView extends SurfaceView implements RenderSurface {
 
   /** Constructs a {@code FlutterSurfaceView} programmatically, without any XML attributes. */
   public FlutterSurfaceView(@NonNull Context context) {
-    this(context, null, false);
+    this(context, null, false, true);
   }
 
   /**
@@ -109,19 +109,21 @@ public class FlutterSurfaceView extends SurfaceView implements RenderSurface {
    * control over whether or not this {@code FlutterSurfaceView} renders with transparency.
    */
   public FlutterSurfaceView(@NonNull Context context, boolean renderTransparently) {
-    this(context, null, renderTransparently);
+    this(context, null, renderTransparently, true);
   }
 
   /** Constructs a {@code FlutterSurfaceView} in an XML-inflation-compliant manner. */
   public FlutterSurfaceView(@NonNull Context context, @NonNull AttributeSet attrs) {
-    this(context, attrs, false);
+    this(context, attrs, false, true);
   }
 
-  private FlutterSurfaceView(
-      @NonNull Context context, @Nullable AttributeSet attrs, boolean renderTransparently) {
+  public FlutterSurfaceView(
+      @NonNull Context context, @Nullable AttributeSet attrs, boolean renderTransparently, boolean notify) {
     super(context, attrs);
     this.renderTransparently = renderTransparently;
-    init();
+    if (notify) {
+      init();
+    }
   }
 
   private void init() {
@@ -249,4 +251,7 @@ public class FlutterSurfaceView extends SurfaceView implements RenderSurface {
 
     flutterRenderer.stopRenderingToSurface();
   }
+
+  @Override
+  public void acquireLatestImage() {}
 }

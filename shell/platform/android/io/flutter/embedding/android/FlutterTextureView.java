@@ -211,4 +211,7 @@ public class FlutterTextureView extends TextureView implements RenderSurface {
     renderSurface.release();
     renderSurface = null;
   }
+
+  @Override
+  public void acquireLatestImage() {}
 }

@@ -253,15 +253,15 @@ import java.util.Arrays;
     ensureAlive();
 
     // if (host.getRenderMode() == RenderMode.surface) {
-    //   FlutterSurfaceView flutterSurfaceView =
-    //       new FlutterSurfaceView(
-    //           host.getActivity(), host.getTransparencyMode() == TransparencyMode.transparent);
+      // FlutterSurfaceView flutterSurfaceView =
+      //     new FlutterSurfaceView(
+      //         host.getActivity(), host.getTransparencyMode() == TransparencyMode.transparent);
 
-    //   // Allow our host to customize FlutterSurfaceView, if desired.
-    //   host.onFlutterSurfaceViewCreated(flutterSurfaceView);
+      // // Allow our host to customize FlutterSurfaceView, if desired.
+      // host.onFlutterSurfaceViewCreated(flutterSurfaceView);
 
-    //   // Create the FlutterView that owns the FlutterSurfaceView.
-    //   flutterView = new FlutterView(host.getActivity(), flutterSurfaceView);
+      // // Create the FlutterView that owns the FlutterSurfaceView.
+      // flutterView = new FlutterView(host.getActivity(), flutterSurfaceView);
 
     FlutterNativeView flutterNativeView = new FlutterNativeView(host.getActivity());
     flutterView = new FlutterView(host.getActivity(), flutterNativeView);

@@ -18,6 +18,9 @@ import android.util.SparseArray;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.Surface;
+import android.view.SurfaceView;
+import android.view.TextureView;
+import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.ViewStructure;
 import android.view.WindowInsets;
@@ -82,9 +85,6 @@ import java.util.Set;
  * information comparing {@link android.view.SurfaceView} and {@link android.view.TextureView}.
  */
 public class FlutterView extends FrameLayout {
-
-  static public FlutterView globalView;
-
   private static final String TAG = "FlutterView";
 
   // Internal view hierarchy references.
@@ -172,13 +172,10 @@ public class FlutterView extends FrameLayout {
     if (renderMode == RenderMode.surface) {
       flutterView = new FlutterSurfaceView(context);
     } else if (renderMode == RenderMode.view) {
-      FlutterNativeView nativeView = new FlutterNativeView(context);
-      flutterView = nativeView;
-      overlayLayerViews.put(0, nativeView);
+      flutterView = new FlutterNativeView(context);
     } else {
       flutterView = new FlutterTextureView(context);
     }
-
     init();
   }
 
@@ -260,13 +257,10 @@ public class FlutterView extends FrameLayout {
       flutterView =
           new FlutterSurfaceView(context, transparencyMode == TransparencyMode.transparent);
     } else if (renderMode == RenderMode.view) {
-      FlutterNativeView nativeView = new FlutterNativeView(context);
-      flutterView = nativeView;
-      overlayLayerViews.put(0, nativeView);
+      flutterView = new FlutterNativeView(context);
     } else {
       flutterView = new FlutterTextureView(context);
     }
-
     init();
   }
 
@@ -300,21 +294,34 @@ public class FlutterView extends FrameLayout {
     super(context, attrs);
 
     this.flutterView = flutterNativeView;
-    overlayLayerViews.put(0, flutterNativeView);
 
     init();
   }
 
+  private SurfaceView surfaceView2;
+
   private void init() {
     Log.v(TAG, "Initializing FlutterView");
 
+    overlayLayerViews.put(0, flutterView);
 
-    globalView = this;
+    // surfaceView = new FlutterSurfaceView(getContext(), null, false, false);
+    // surfaceView.getHolder().setFormat(PixelFormat.TRANSPARENT);
+    // addView(surfaceView);
+
+
+    // surfaceView2 = new SurfaceView(getContext());
+    // surfaceView2.getHolder().setFormat(PixelFormat.TRANSPARENT);
+    // LayoutParams layoutParams = new LayoutParams(100, 100);
+    // layoutParams.leftMargin = 50;
+    // layoutParams.topMargin = 750;
+    // surfaceView2.setLayoutParams(layoutParams);
+    // surfaceView2.setZOrderOnTop(true);
+    // addView(surfaceView2);
 
     LayoutParams params = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
     flutterView.setLayoutParams(params);
     addView(flutterView);
-
 
     // FlutterView needs to be focusable so that the InputMethodManager can interact with it.
     setFocusable(true);
@@ -1048,24 +1055,26 @@ public class FlutterView extends FrameLayout {
     void onFlutterEngineDetachedFromFlutterView();
   }
 
-  private final Map<Integer, FlutterNativeView> overlayLayerViews = new HashMap<>();
+  private final Map<Integer, View> overlayLayerViews = new HashMap<>();
   private final Map<Integer, View> platformViews = new HashMap<>();
 
-  public FlutterOverlayLayer createOverlayLayer() {
-    Log.d("flutter", "/////////////////////// ---> Creating image reader of size " + getWidth() + "x" + getHeight());
+  private int nextOverlayId = 1;
+  private SurfaceView surfaceView; 
 
+  public FlutterOverlayLayer createOverlayLayer() {
     ImageReader reader = ImageReader.newInstance(
       getWidth(),
       getHeight(),
       PixelFormat.RGBA_8888,
-      2,
-      HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE | HardwareBuffer.USAGE_GPU_COLOR_OUTPUT);
+      2);
+    // , HardwareBuffer.USAGE_GPU_SAMPLED_IMAGE | HardwareBuffer.USAGE_GPU_COLOR_OUTPUT
 
-    FlutterNativeView view = new FlutterNativeView(getContext(), /*attrs=*/ null, /*reader=*/ reader);
-
-    int nextId = overlayLayerViews.size();
-    overlayLayerViews.put(nextId, view);
-    return new FlutterOverlayLayer(nextId, reader.getSurface());
+    View view = new FlutterNativeView(getContext(), /*attrs=*/ null, /*reader=*/ reader);
+    overlayLayerViews.put(nextOverlayId, view);
+    FlutterOverlayLayer layer =
+        new FlutterOverlayLayer(nextOverlayId, reader.getSurface());
+    nextOverlayId++;
+    return layer;
   }
 
   private Set<Integer> unusedOverlayLayers = new HashSet<>();
@@ -1090,25 +1099,21 @@ public class FlutterView extends FrameLayout {
       // platformViews.remove(platformViewIdx);
     }
     Log.d("flutter", "Number of overlays: " + overlayLayerViews.size());
-    for (Map.Entry<Integer, FlutterNativeView> entry : overlayLayerViews.entrySet()) {
-      // if (!unusedPlatformViews.contains(entry.getKey())) {
-        entry.getValue().acquireLatestImage();
-      // }
+    for (Map.Entry<Integer, View> entry : overlayLayerViews.entrySet()) {
+      if (!unusedOverlayLayers.contains(entry.getKey())) {
+        ((RenderSurface)entry.getValue()).acquireLatestImage();
+      }
     }
   }
 
   public void positionOverlayLayer(long id, float x, float y, float width, float height) {
-    Log.e("flutter", "positionOverlayLayer(" + id + ", " + x + ", " + y + ", " + width + ", " + height);
-
-    FlutterNativeView view = overlayLayerViews.get((int)id);
+    View view = overlayLayerViews.get((int)id);
     if (view.getParent() == null) {
       addView(view);
     }
-    float density = getContext().getResources().getDisplayMetrics().density;
-    android.widget.FrameLayout.LayoutParams layoutParams = new android.widget.FrameLayout.LayoutParams((int) (width), (int) (height));
-    layoutParams.leftMargin = (int) x;
-    layoutParams.topMargin = (int) y;
-
+    android.widget.FrameLayout.LayoutParams layoutParams = new android.widget.FrameLayout.LayoutParams((int)width, (int)height);
+    layoutParams.leftMargin = (int)x;
+    layoutParams.topMargin = (int)y;
     view.setLayoutParams(layoutParams);
     view.setVisibility(View.VISIBLE);
     view.bringToFront();
@@ -1127,15 +1132,12 @@ public class FlutterView extends FrameLayout {
     }
 
     View view = platformViews.get(viewId);
-    Log.e("flutter", "onPositionPlatformView(" + viewId + ", " + x + ", " + y + ", " + width + ", " + height);
-    float density = getContext().getResources().getDisplayMetrics().density;
-    android.widget.FrameLayout.LayoutParams layoutParams = new android.widget.FrameLayout.LayoutParams((int) (width * density), (int) (height * density));
+    LayoutParams layoutParams = new LayoutParams((int) (width), (int) (height));
     layoutParams.leftMargin = (int) x;
     layoutParams.topMargin = (int) y;
     view.setLayoutParams(layoutParams);
     view.setVisibility(View.VISIBLE);
     view.bringToFront();
-
     // Mark the platform view as used in the current frame.
     unusedPlatformViews.remove(viewId);
   }
