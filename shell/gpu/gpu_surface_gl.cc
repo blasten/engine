@@ -255,8 +255,6 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceGL::AcquireFrame(const SkISize& size, bo
 
   surface->getCanvas()->setMatrix(root_surface_transformation);
 
-
-  debug_ = debug;
   SurfaceFrame::SubmitCallback submit_callback =
       [weak = weak_factory_.GetTaskRunnerAffineWeakPtr()](
           const SurfaceFrame& surface_frame, SkCanvas* canvas) {
@@ -271,13 +269,6 @@ bool GPUSurfaceGL::PresentSurface(SkCanvas* canvas) {
   if (delegate_ == nullptr || canvas == nullptr || context_ == nullptr) {
     return false;
   }
-
-
-  // if (!delegate_->GLContextMakeCurrent()) {
-  //   FML_LOG(ERROR)
-  //       << "Could not make the context current to acquire the frame.";
-  //   return false;
-  // }
 
   {
     TRACE_EVENT0("flutter", "SkCanvas::Flush");

@@ -59,7 +59,6 @@ class GPUSurfaceGL : public Surface {
   const bool render_to_surface_;
   bool valid_ = false;
 
-  bool debug_ = false;
   fml::WeakPtrFactory<GPUSurfaceGL> weak_factory_;
 
   bool CreateOrUpdateSurfaces(const SkISize& size);
