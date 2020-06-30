@@ -36,11 +36,14 @@ public class TextPlatformViewActivity extends TestableFlutterActivity {
   @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
+
+    if (Build.VERSION.SDK_INT > 22) {
+      requestPermissions(new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+      System.out.println(" Build.VERSION.SDK_INT > 22");
+    }
+
     final Intent launchIntent = getIntent();
     if ("com.google.intent.action.TEST_LOOP".equals(launchIntent.getAction())) {
-      if (Build.VERSION.SDK_INT > 22) {
-        requestPermissions(new String[] {Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
-      }
       // Run for one minute, get the timeline data, write it, and finish.
       final Uri logFileUri = launchIntent.getData();
       new Handler()

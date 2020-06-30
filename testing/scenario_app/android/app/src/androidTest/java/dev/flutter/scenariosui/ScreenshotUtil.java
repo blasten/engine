@@ -90,10 +90,15 @@ public class ScreenshotUtil {
 
   void writeBitmap(Bitmap bitmap, String name, String testClass, String testName)
       throws IOException {
+    System.out.println("writeBitmap");
+
     if (serializer == null) {
       throw new RuntimeException("ScreenshotUtil must be initialized. Call init().");
     }
+    System.out.println("ABOUT TO WRITE");
+
     album.writeBitmap(name, 0, 0, bitmap);
+    System.out.println("START <screenshot>");
 
     serializer.startTag(null, "screenshot");
     writeText("name", name);
@@ -197,8 +202,10 @@ public class ScreenshotUtil {
             try {
               ScreenshotUtil.getInstance().writeBitmap(bitmap, screenshotName, testClass, testName);
             } catch (IOException e) {
+              System.out.println("FAILED: " + e.toString());
               throw new RuntimeException(e);
             }
+
             return null;
           }
         });
